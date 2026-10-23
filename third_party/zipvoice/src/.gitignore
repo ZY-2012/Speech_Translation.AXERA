@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 模型产物（不上传 GitHub，发布到 HuggingFace）
+*.axmodel
+*.onnx
+*.pt
+*.pth
+*.bin
+
+# C++ 编译产物与工具链（工具链下载方式见 cpp/README.md）
+cpp/bin/
+cpp/build_*/
+cpp/install/
+cpp/toolchains/
+
+# 运行产物
+outputs/
+build/
+*.wav
