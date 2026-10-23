@@ -40,8 +40,9 @@ class AxLlmTranslator:
             self._started = True
             print("[llm] using existing axllm server", flush=True)
             return True
-        binary = self.conf["binary"]
-        model = self.conf["model_dir"]
+        root = Path(self.cfg["runtime"]["work_dir"]).parent
+        binary = str(root / self.conf["binary"])
+        model = str(root / self.conf["model_dir"])
         log_dir = Path(self.cfg["runtime"]["log_dir"])
         log_dir.mkdir(parents=True, exist_ok=True)
         self._log = open(log_dir / "axllm.log", "ab", buffering=0)
@@ -50,8 +51,8 @@ class AxLlmTranslator:
         args = [binary, "serve", model, "--port", str(self.conf.get("port", 8000))]
         self._log.write(("\n=== start %s ===\n" % " ".join(args)).encode())
         self._proc = subprocess.Popen(args, stdout=self._log, stderr=self._log,
-                                      cwd=str(Path(self.cfg["runtime"]["work_dir"])),
-                                      env=env, start_new_session=True)
+                                      cwd=str(root), env=env,
+                                      start_new_session=True)
         self._started = True
         if not wait:
             return True

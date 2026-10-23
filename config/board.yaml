@@ -32,7 +32,9 @@ asr:
 
 llm:
   enabled: true
-  backend: axllm
+  backend: qwen
+  qwen_enabled: true
+  opus_enabled: true
   binary: third_party/llm/axllm
   model_dir: models/qwen3-0.6b
   model_name: AXERA-TECH/Qwen3-0.6B-GPTQ-Int4
@@ -52,6 +54,11 @@ llm:
   timeout_s: 30
   direction: auto
   use_context: false
+  opus:
+    enabled: true
+    binary: models/opus_mt/bin/opus_mt_worker
+    model_root: models/opus_mt/models
+    max_new_tokens: 64
 
 tts:
   enabled: true

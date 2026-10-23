@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+
+# Float weights, ONNX, quantized models and calibration bundles
+*.axmodel
+*.onnx
+*.pt
+*.ckpt
+*.bin
+*.npy
+*.tar.gz
+!cpp/third_party/sentencepiece-0.2.1.tar.gz
+origin/
+
+# Generated per-direction work dirs
+*/export/
+*/compile/
+*/simulate/
+*/calib_data/
+
+# C++ build products and toolchains
+cpp/build*/
+cpp/bin/
+cpp/toolchains/
+cpp/third_party/sentencepiece/
+cpp/third_party/sentencepiece_build/
+
+# Run artifacts
+outputs/
+*.o

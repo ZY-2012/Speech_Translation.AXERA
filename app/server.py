@@ -43,6 +43,9 @@ def _status():
         "asr_stream": False,
         "asr_offline": bool(c.asr and c.asr.ready()) if c else False,
         "llm": bool(c.llm and c.llm.ready()) if c else False,
+        "mt_backend": getattr(c, "mt_backend", None) if c else None,
+        "qwen": bool(c.llm_qwen and c.llm_qwen.ready()) if c else False,
+        "opus": bool(c.llm_opus and c.llm_opus.ready()) if c else False,
         "tts": bool(c.tts and (c.tts.ready() if callable(c.tts.ready) else c.tts.ready)) if c else False,
         "session": bool(STATE["session"]),
     }
@@ -210,6 +213,11 @@ class Handler(BaseHTTPRequestHandler):
                     if session is not None:
                         session.echo_guard = bool(msg.get("value", True))
                     ws.send_json({"type": "echo_guard", "value": bool(msg.get("value", True))})
+                elif cmd == "set_mt_backend":
+                    c = STATE["components"]
+                    backend = c.set_mt_backend(msg.get("value", "opus"))
+                    ws.send_json({"type": "mt_backend", "value": backend,
+                                  "status": _status()})
         except WsClosed:
             pass
         except Exception:

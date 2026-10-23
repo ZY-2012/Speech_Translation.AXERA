@@ -1,0 +1,8 @@
+torch
+transformers
+sentencepiece
+numpy
+onnx
+onnxruntime
+onnxsim
+onnxslim

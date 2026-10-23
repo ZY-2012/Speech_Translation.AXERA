@@ -114,6 +114,10 @@
       <option value="en">中文 → English</option>
       <option value="zh">English → 中文</option>
     </select>
+    <select id="selMt" title="翻译引擎">
+      <option value="opus">MT: Opus-MT 快速</option>
+      <option value="qwen">MT: Qwen 质量</option>
+    </select>
     <label class="switch"><input type="checkbox" id="chkPlay" checked> 播放译音</label>
     <label class="switch" title="免提/扬声器时防止译音被麦克风重新识别"><input type="checkbox" id="chkEcho" checked> 防回声（译音时静音麦克风）</label>
     <label class="switch"><input type="checkbox" id="chkPtt"> 仅按住时发送</label>
@@ -207,6 +211,11 @@
         if (m.status) applyStatus(m.status);
         break;
       case "status":
+        if (m.status) applyStatus(m.status);
+        break;
+      case "mt_backend":
+        if (m.value) $("selMt").value = m.value;
+        log("MT 引擎：" + (m.value === "qwen" ? "Qwen 质量" : "Opus-MT 快速"));
         if (m.status) applyStatus(m.status);
         break;
       case "ready":
@@ -305,6 +314,7 @@
   function applyStatus(st) {
     setPill("pillAsr", st.asr_offline ? "ASR 就绪" : (st.asr_stream ? "ASR 流式" : "ASR 加载中"), st.asr_offline||st.asr_stream ? "on" : "warn");
     setPill("pillLlm", st.llm ? "MT 就绪" : "MT 加载中", st.llm ? "on" : "warn");
+    if (st.mt_backend) $("selMt").value = st.mt_backend;
     setPill("pillTts", st.tts ? "TTS 就绪" : "TTS 加载中", st.tts ? "on" : "warn");
     if (st.mock) log("mock 模式：无 NPU 模型");
   }
@@ -651,6 +661,7 @@
   $("btnSim").onclick = startSim;
   $("btnSimStop").onclick = () => stopSim(true);
   $("selDir").onchange = () => send({type:"set_direction", direction:$("selDir").value});
+  $("selMt").onchange = () => send({type:"set_mt_backend", value:$("selMt").value});
   $("chkPlay").onchange = () => { S.play = $("chkPlay").checked; if (!S.play) clearAudio(); };
   $("chkEcho").onchange = () => {
     S.echoGuard = $("chkEcho").checked;

@@ -1,0 +1,800 @@
+>>cjy_Hans<< Tom isn't going to give me that.
+汤姆不会同意的
+汤姆不会给我的
+
+>>cjy_Hans<< Tom got drunk with his friends in the park.
+汤姆和他的朋友们在公园喝醉了
+汤姆和他的朋友在公园里喝醉了
+
+>>cjy_Hant<< It is he.
+是那家。
+就是他 It is he.
+
+>>cmn<< Seen from a distance, the hill looks like an elephant.
+Cóng yuǎnchù kàn，nàzuòshān xiàng yìtóu dàxiàng。 从远处看，那座山像一头大象。
+{\fnMicrosoft YaHei\fs14\shad1\4aH80\b0}山像大象 {\fnMicrosoft YaHei\fs14\shad1\4aH80\b0}山像大象 {\fnMicrosoft YaHei\fs14\shad1\4aH80\
+
+>>cmn<< Do you know who Rie Miyazawa is?
+你知道Rie Miyazawa是誰嗎?
+{\fnMicrosoft JhengHei\fs26\bord1\shad2\fsp1\2cH0000FF\3cHFF0000\4cHFF0000}你知道Miyazawa吗
+
+>>cmn<< This is Edward.
+是Edward。
+我是Edward
+
+>>cmn<< My name is Andrea.
+我叫Andrea。
+我叫Andrea
+
+>>cmn<< Leave now.
+滾。
+{\fnSIMHEI\fs22\1cHFFFFFF\3cHFF8000}走吧
+
+>>cmn<< Nancy is afraid of dogs.
+Nancyæçã
+南希害怕狗 Nancy is afraid of dogs.
+
+>>cmn<< Tom didn't like Mary.
+Tom不喜欢Mary。
+汤姆不喜欢玛丽 Tom didn't like Mary.
+
+>>cmn<< David Beckham is English.
+David Beckham是英国人。
+David Beckham是英国人
+
+>>cmn<< Ken is older than Seiko.
+Ken比Seiko年長。
+{\fnMicrosoft YaHei\fs14\shad1\4aH80\b0}肯比Seiko大
+
+>>cmn<< Julian was wrong?
+Julián錯了嗎？
+朱利安错了吗 Julian was wrong?
+
+>>cmn<< Anybody knows who Florence is?
+有没有人认识Florence？
+有人知道佛罗伦萨是谁吗? Anyone knows who Florence is?
+
+>>cmn<< My wife's name is Lidia Zarębowa.
+我妻子名叫Lidia Zarębowa。
+我妻子叫Lidia Zaribowa
+
+>>cmn<< All right.
+行。
+行。
+
+>>cmn<< Duh.
+哦。
+{\fnYouYuan\fs16\1cHC0C0C0}啊
+
+>>cmn<< Nancy looks like my sister.
+Nancyå¾åæçå¤§å§ã
+Nancy长得像我妹妹
+
+>>cmn_Hans<< I'm sure he will go far in the business world.
+我坚信他在商业界会有所作为。
+我相信他在商业界会走得很远的
+
+>>cmn_Hans<< Why does Tom call me Mary?
+为什么汤姆叫我玛丽？
+为什么汤姆叫我玛丽?
+
+>>cmn_Hans<< I'm learning Spanish.
+我在学西班牙语。
+我在学西班牙语
+
+>>cmn_Hans<< Enjoy yourself at the party, John.
+聚会愉快，约翰。
+玩得开心点,约翰
+
+>>cmn_Hans<< However, the singer does not deny her ancestry.
+但是歌手并不否认她的出身。
+然而,歌手并不否认她的祖先。
+
+>>cmn_Hans<< Don't put anything in the bag.
+不要把所有东西都放到包里面。
+别把东西放袋子里
+
+>>cmn_Hans<< He likes re-watching the old videotapes.
+他喜欢回顾老录像带。
+他喜欢重看旧的录影带
+
+>>cmn_Hans<< I want to eat French cuisine.
+我想吃法国菜。
+我想吃法国菜
+
+>>cmn_Hans<< Please charge your glasses and drink a toast to the bride and groom!
+请诸位斟满酒，为新郎和新娘干杯！
+请举杯敬新娘和新郎一杯!
+
+>>cmn_Hans<< My heart was filled with happiness.
+我心里充满着快乐。
+我的心充满了幸福
+
+>>cmn_Hans<< Our teacher also said that her wedding wouldn't be the same as other people's; we asked how it would be different, but she didn't say.
+老师又说，她的婚礼跟别人不一样，我们问怎么不一样，老师不说。
+我们的老师还说她的婚礼跟别人的不一样 我们问她会有什么不同 但她没说
+
+>>cmn_Hans<< Please wait until the end of this month.
+本月结束之前请等待。
+请等到这个月底
+
+>>cmn_Hans<< There are deep wrinkles on his face.
+她的脸上有了深深的皱纹。
+他脸上有很深的皱纹
+
+>>cmn_Hans<< Will you stay at home?
+你会待在家吗？
+你会留在家里吗?
+
+>>cmn_Hans<< He was invited to be the chairman of the club.
+他受邀做俱乐部的主席。
+他被邀请担任俱乐部的主席。
+
+>>cmn_Hans<< I like both science and math.
+科学和数学我都喜欢。
+我喜欢科学和数学
+
+>>cmn_Hans<< Concerning this problem, our views are not the same.
+在这个问题上，我们的看法不一样。
+关于这个问题,我们的看法不同。
+
+>>cmn_Hans<< The audience was largely made up of very young children.
+大部分观众是年幼的儿童。
+听众主要由非常年幼的儿童组成。
+
+>>cmn_Hans<< His response was contrary to our expectations.
+他的回应出乎我们的意料。
+他的反应违背了我们的期望。
+
+>>cmn_Hans<< My uncle's hobby is playing baseball.
+我的舅舅爱好打板球。
+我叔叔的爱好是打棒球
+
+>>cmn_Hans<< She came to see us yesterday.
+她昨天来看我们。
+她昨天来看我们
+
+>>cmn_Hans<< You've lost weight, haven't you?
+你减肥了，不是么？
+你瘦了,不是吗?
+
+>>cmn_Hans<< You will be sorry for it some day.
+有一天这会让你遗憾的。
+总有一天你会后悔的
+
+>>cmn_Hans<< I laid myself on the grass.
+我在草地上直躺下来了。
+我把自己放在草地上。
+
+>>cmn_Hans<< This is my camera.
+这是我的照相机。
+这是我的相机。
+
+>>cmn_Hans<< I went to London.
+我去伦敦了。
+我去了伦敦
+
+>>cmn_Hans<< I like your family.
+我喜欢你的家庭。
+我喜欢你的家人
+
+>>cmn_Hans<< I don't think we'd have any chance of winning.
+我认为我们没有机会赢。
+我想我们没有胜算的机会了
+
+>>cmn_Hans<< I have to share this room with my friend at present.
+眼下我不得不和我朋友同住这间房间。
+我现在得和朋友共用这间房
+
+>>cmn_Hans<< They're just talking shit.
+她们只是胡说八道。
+他们在胡说八道
+
+>>cmn_Hans<< I do my homework after school.
+我在放学後做作業。
+我放学后做功课
+
+>>cmn_Hans<< "I saw her five days ago," he said.
+他说：“我五天前见过她。”
+他说"我五天前见过她"
+
+>>cmn_Hans<< There were some graphic novels mixed into the pile of specialty books on the desk.
+书桌上一叠专业书里有几本卡通书混在里面。
+有几本图画小说 夹在桌子上的一叠专业书籍里
+
+>>cmn_Hans<< People who play with mud will get their hands dirty.
+玩泥的人会弄脏自己的双手。
+玩泥巴的人会弄脏手
+
+>>cmn_Hans<< She writes an excellent hand.
+她的笔迹漂亮极了。
+她写了一手好手。
+
+>>cmn_Hans<< There is an apple on the desk.
+书桌上有一个苹果。
+桌上有个苹果
+
+>>cmn_Hans<< My school library has a collection of 2.5 million books.
+我校图书馆藏书二百五十万册。
+我的学校图书馆藏有250万本书
+
+>>cmn_Hans<< Ask her when she comes back.
+等她回来的时候问问她。
+等她回来再问她
+
+>>cmn_Hans<< I am a student.
+我是个学生。
+我是一个学生。
+
+>>cmn_Hans<< He was hanged during the Revolution.
+革命的时候他被吊死了。
+他在革命期间被绞死
+
+>>cmn_Hans<< Will I have a scar?
+我会留疤吗？
+我有伤疤吗?
+
+>>cmn_Hans<< Could you please find the missing key. I can't open the pantry.
+你能帮忙寻找丢失的钥匙吗? 我打不开食品柜。
+你能找到丢失的钥匙吗 我不能打开储藏室
+
+>>cmn_Hans<< Anyone up for a game of poker?
+谁想来玩扑克。
+有人想玩扑克游戏吗?
+
+>>cmn_Hans<< I had my fortune read by an old lady with an eery-looking glass eye.
+我让一个有着奇怪玻璃眼珠的老太太帮我算了命。
+我从一个长着眼的老太太那里读到了我的财富
+
+>>cmn_Hans<< The demand is huge.
+好大一颗钻。
+需求是巨大的。
+
+>>cmn_Hans<< Someone came.
+有人来了。
+有人来了
+
+>>cmn_Hans<< I am here.
+我在这里。
+我在这里。
+
+>>cmn_Hans<< We cannot overestimate the value of health.
+我们不能高估健康的价值。
+我们不能高估健康的价值。
+
+>>cmn_Hans<< It was raining when we left; it was sunny when we arrived.
+我们走的时候下着雨，到的时候有太阳。
+我们离开时下雨;我们到达时阳光明媚。
+
+>>cmn_Hans<< He'll play golf even if it rains.
+即使在下雨天，他也打高尔夫球。
+就算下雨他也会打高尔夫
+
+>>cmn_Hans<< The nurse is ill.
+护士很生病。
+护士病了
+
+>>cmn_Hans<< You must rid yourself of bad habits.
+你该摆脱你的坏习惯。
+你必须摆脱自己的坏习惯。
+
+>>cmn_Hans<< This is one of the best restaurants I've ever eaten in.
+这是我吃过的最好的餐馆之一。
+这是我吃过最好的餐厅之一
+
+>>cmn_Hans<< Can I reserve a seat to Hawaii for Christmas?
+我能不能够订一个圣诞节时去夏威夷的位子?
+我可以给夏威夷留个位子过圣诞节吗?
+
+>>cmn_Hans<< I hope that some scientist will soon discover a cure for AIDS.
+真希望科学家们能早点找到艾滋病的治疗方法。
+我希望,一些科学家将很快发现治愈艾滋病的办法。
+
+>>cmn_Hans<< Miss! I feel sick.
+小姐！我觉得不舒服。
+小姐,我好恶心
+
+>>cmn_Hans<< They already called off the strike.
+他们已经取消了罢工。
+他们已经取消罢工了
+
+>>cmn_Hans<< I don't know when he'll come.
+我不知道他什么时候来。
+我不知道他什么时候会来
+
+>>cmn_Hans<< Are you awake?
+你醒来了吗？
+你醒了吗?
+
+>>cmn_Hans<< Give me your phone number.
+给我你的电话号码。
+给我你的电话号码。
+
+>>cmn_Hans<< On sunny days, the beach is very crowded.
+晴天，海滩总是很拥挤。
+在阳光明媚的日子里,海滩非常拥挤。
+
+>>cmn_Hans<< Her grade in English was very good.
+她英语成绩很好。
+她的英语成绩很好
+
+>>cmn_Hans<< Why did you use up all the money?
+为什么你花了所有钱？
+你为什么用光了所有的钱?
+
+>>cmn_Hans<< Ted was finally able to communicate his thoughts in Japanese.
+Ted最终能用日语交流他的想法了。
+{\fn黑体\fs22\bord1\shad0\3aHBE\4aH00\fscx67\fscy66\2cHFFFFFF\3cH808080}Ted终于用日语传达了他的思想
+
+>>cmn_Hans<< But, of course, hindsight is 20-20.
+但是，当然啦，事后诸葛亮总是好当。
+但是,当然,后视线是20 -20。
+
+>>cmn_Hans<< Switzerland is located between France, Italy, Austria and Germany.
+瑞士位于法国、意大利、奥地利和德国之间。
+瑞士位于法国、意大利、奥地利和德国之间。
+
+>>cmn_Hans<< I love egg yolks.
+我爱蛋黄\\(≧▽≦)/
+我喜欢蛋黄
+
+>>cmn_Hans<< Not wanting is the same as having.
+没有欲望就等于拥有。
+不想要就跟有一样
+
+>>cmn_Hans<< I understand that you feel uneasy, but don't worry.
+我知道你不自在，但别急。
+我知道你很不安,但别担心
+
+>>cmn_Hans<< Where are we?
+我们在哪儿？
+我们在哪里?
+
+>>cmn_Hans<< This must be changed.
+这个东西必须改变。
+必须改变这种状况。
+
+>>cmn_Hans<< I'll give you a prescription.
+我会给你开个药方。
+我给你开个处方
+
+>>cmn_Hans<< Balls are round.
+球是圆的。
+球是圆的。
+
+>>cmn_Hans<< When he asked who had broken the window, all the boys put on an air of innocence.
+当他问道是谁打碎了玻璃时，所有的男孩子们都装作一副无辜的样子。
+当他问是谁打破了窗户时,所有男孩都装了天真无邪的气息。
+
+>>cmn_Hans<< The “One Only Child Parent for Two Children” policy is already in effect in Shanghai. In the future, it's possible that it will be implemented throughout China.
+“单独二胎”政策已经在上海实施，将来可能会在全国推行。
+“两个孩子独生子”政策已经在上海实施,将来有可能在整个中国实施。
+
+>>cmn_Hans<< The meals are not too good.
+饭菜不太好。
+饭菜不太好吃
+
+>>cmn_Hans<< The station is not far from here.
+火车站离这里不远。
+车站离这里不远
+
+>>cmn_Hans<< Please sit down!
+请坐！
+请坐!
+
+>>cmn_Hans<< What's your problem?
+你有什么问题？
+你有什么问题?
+
+>>cmn_Hans<< She came across the street.
+她过了马路。
+她走到街对面
+
+>>cmn_Hans<< The doctor told Mr Smith to give up smoking if he wanted to live long.
+医生告诉史密斯先生他要长寿的话就得戒烟。
+医生告诉史密斯先生,如果他想长命百岁,就戒烟。
+
+>>cmn_Hans<< I don't know what this word means.
+我不知道这个词什么意思。
+我不知道这个词是什么意思。
+
+>>cmn_Hans<< You are to come here at 9 o'clock tomorrow.
+明天你九点钟要来这里的。
+你明天九点过来
+
+>>cmn_Hans<< Take two aspirins for your headache.
+你头疼吃两片阿司匹林吧.
+头痛要吃两片阿司匹林
+
+>>cmn_Hans<< I haven't changed.
+我没改变。
+我没变
+
+>>cmn_Hans<< She is busy with the care of her children.
+她忙着照料孩子。
+她忙着照顾孩子
+
+>>cmn_Hans<< I have a few friends who speak French well.
+我有一些法语说得好的朋友。
+我有几个会讲法语的朋友
+
+>>cmn_Hans<< I know that it's hard to believe.
+我知道，要相信这件事很难。
+我知道这很难相信
+
+>>cmn_Hans<< This wasn't such a good idea after all.
+这终究不是一个很好主意
+毕竟这不是个好主意
+
+>>cmn_Hans<< Why are you crying?
+你为什么哭？
+你为什么哭?
+
+>>cmn_Hans<< Everything is ready.
+一切就绪。
+一切都准备好了。
+
+>>cmn_Hans<< You ain't seen nothing yet.
+这还算什么！
+你还没有看到任何东西。
+
+>>cmn_Hans<< Tom often reads when his children aren't at home.
+汤姆经常在孩子们不在家时阅读。
+汤姆经常在孩子不在家的时候看书
+
+>>cmn_Hans<< I will do the shopping for her birthday.
+我要去给她生日买点东西。
+我会为她的生日买东西
+
+>>cmn_Hans<< Don't be nervous.
+别紧张。
+别紧张
+
+>>cmn_Hans<< I can't leave home, even if only for a while.
+我不能离开家，即使是一会儿。
+我不能离开家,即使只是一阵子。
+
+>>cmn_Hans<< You should apologize for your rudeness.
+您该为您的粗鲁道歉。
+你应该为你的粗鲁道歉
+
+>>cmn_Hans<< He is married to an American lady.
+他和一个美国女人结婚了。
+他娶了一位美国女士
+
+>>cmn_Hans<< Sugar melts in hot water.
+糖溶于热水。
+糖在热水中融化
+
+>>cmn_Hans<< This picture frame can make the picture rise in value.
+这个画框能让画升值。
+这个图片框可以让图片的值上升 。
+
+>>cmn_Hans<< My parents are going to buy a new CD.
+我的父母准备买一个新的光盘。
+我父母要买一张新的CD
+
+>>cmn_Hans<< The price is 20.5 yuan.
+价钱是二十五元五毛。
+价钱是20.5元
+
+>>cmn_Hans<< Parents love their children.
+父母爱自己的孩子。
+父母爱他们的孩子。
+
+>>cmn_Hans<< The IMF ruled out any new loans to that country.
+国际货币基金组织不考虑再借款给该国。
+货币基金组织排除了向该国提供的任何新贷款。
+
+>>cmn_Hans<< Haven't you chosen?
+选好没有啊？
+你没有选择吗?
+
+>>cmn_Hans<< The teachers are playing games with students in the kindergarten.
+幼儿园里，老师正在带领小朋友们嘻戏。
+老师们在幼儿园里和学生玩游戏
+
+>>cmn_Hans<< I met a friend.
+我遇见一个朋友。
+我遇到了一个朋友。
+
+>>cmn_Hans<< Here's where they usually have dinner.
+这儿是他们通常吃晚饭的地方。
+这是他们通常吃晚饭的地方
+
+>>cmn_Hans<< Just ask Tom.
+问问汤姆吧。
+问问汤姆吧
+
+>>cmn_Hans<< When will we have arrived?
+我们什么时候会到？
+我们什么时候到?
+
+>>cmn_Hans<< I can't believe Tom is really planning to do this.
+我无法相信汤姆真的打算做这事儿。
+真不敢相信汤姆真的打算这么做
+
+>>cmn_Hans<< Open fire!
+开火！
+开火!
+
+>>cmn_Hans<< He's able to speak Japanese.
+他会说日语。
+他能说日语
+
+>>cmn_Hans<< "You can't answer my question with a question." "Why not?"
+“你不能用问题来回答我的问题。” “为什么不能？”
+"你不能回答我的问题" "为什么不?"
+
+>>cmn_Hans<< Tom doesn't like Boston.
+汤姆不喜欢波士顿。
+汤姆不喜欢波士顿
+
+>>cmn_Hans<< Who is your favourite singer?
+你喜欢的歌手是谁？
+你最喜欢的歌手是谁?
+
+>>cmn_Hans<< He painted the barn.
+他画了谷仓。
+他画的谷仓。
+
+>>cmn_Hans<< The majority of people marry sooner or later.
+大部分人迟早要结婚。
+大多数人迟早会结婚。
+
+>>cmn_Hans<< Columbus discovered America.
+哥伦布发现了美洲。
+哥伦布发现了美国
+
+>>cmn_Hans<< Almost everyone in our village is related to one another.
+我们村里所有的村民几乎彼此都是亲戚。
+我们村里几乎每个人都是亲戚
+
+>>cmn_Hans<< She has a tender heart.
+她很温柔。
+她有一个温柔的心脏。
+
+>>cmn_Hans<< People like him because he is kind.
+因为他是个友好的人，所以大家都喜欢他。
+人喜欢他 因为他是善良的。
+
+>>cmn_Hans<< If you heard her speak English, you would take her for an American.
+如果你听到她讲的英语，你会以为她是美国人呢。
+如果你听到她说英语, 你会认为她是美国人。
+
+>>cmn_Hans<< I haven't yet watched that video.
+我还没看过那段视频。
+我还没看过那段录像呢
+
+>>cmn_Hans<< To be honest, we came to capture you.
+老实说，我们是来抓你们的。
+说实话 我们是来抓你的
+
+>>cmn_Hans<< It is dangerous to bathe in this river.
+在这条河里游泳很危险。
+在河里洗澡很危险
+
+>>cmn_Hans<< Nice guys finish last.
+男不坏，女不爱。
+不错的家伙最后完成。
+
+>>cmn_Hans<< I need to go home.
+我该回家了。
+и眔產
+
+>>cmn_Hans<< The butcher's knife is in the drawer.
+屠夫的刀子在抽屉里
+屠夫的刀在抽屉里
+
+>>cmn_Hans<< I can't decide if I'm happy or sad.
+我无法确定我是高兴还是难过。
+我无法决定自己是快乐还是悲伤
+
+>>cmn_Hans<< Once there lived an old man in a village.
+曾经在一个村落里住着一位老人。
+曾经有个老人住在一个村子里
+
+>>cmn_Hans<< I like to take a walk after meals.
+我喜欢饭后散步。
+我喜欢在饭后散散步
+
+>>cmn_Hans<< I ran as fast as possible.
+我跑得尽可能快。
+我跑得越快越好
+
+>>cmn_Hans<< We have a traitor among us.
+我们之间有个叛徒。
+我们中间有个叛徒
+
+>>cmn_Hans<< Come back soon.
+快点回来吧。
+很快回来。
+
+>>cmn_Hans<< My home is far away.
+我家很远。
+我的家离这里很远
+
+>>cmn_Hans<< Please wait one meter away.
+请在一米线外等候。
+请等一米远
+
+>>cmn_Hans<< That's the stupidest thing I've ever said.
+我曾说过的废话当中那是最愚蠢的一句。
+这是我说过的最蠢的话了
+
+>>cmn_Hans<< He is back.
+他回来了。
+他回来了
+
+>>cmn_Hans<< It's her fifth birthday tomorrow.
+明天是她五岁生日。
+明天是她五岁生日
+
+>>cmn_Hans<< He looks like a sportsman, but he is a writer.
+他看起来像个运动员，但是其实是个作家。
+他看起来像一个运动员, 但他是一个作家。
+
+>>cmn_Hans<< He found me a taxi.
+他帮我打到一辆出租车。
+他给我找了辆出租车
+
+>>cmn_Hans<< Washington, D.C., is the capital of the United States of America.
+美国的首都是华盛顿。
+华盛顿特区是美利坚合众国的首都。
+
+>>cmn_Hans<< This isn't Mandarin, it's Shanghainese.
+这不是普通话，而是上海话。
+这不是普通话,是上海话
+
+>>cmn_Hans<< We have to go.
+我们必须走了。
+我们得走了 We have to go.
+
+>>cmn_Hans<< She told him that she believed in astrology.
+她告诉了他自己相信占星术。
+她告诉他她相信占星术
+
+>>cmn_Hans<< Did you bring cash or your credit card with you?
+你钱或者信用卡带来没有？
+你带现金或信用卡了吗?
+
+>>cmn_Hans<< The year of the snake has begun.
+蛇年开始了。
+蛇的一年已经开始了
+
+>>cmn_Hans<< I have run out of my traveling expenses.
+我把旅费耗光了。
+我的差旅费用都用光了
+
+>>cmn_Hans<< "Did you watch TV on the weekend?" "No, I didn't."
+“上周你看电视了吗？”“没有，我没看。”
+"你周末有没有看电视?" "不,我没有"
+
+>>cmn_Hans<< I've heard this story before.
+我以前听过这个故事。
+我以前听过这个故事
+
+>>cmn_Hans<< The whole neighborhood was surprised at the news.
+整个小区对这个消息很惊讶。
+整个社区都对新闻感到惊讶。
+
+>>cmn_Hans<< That dog runs very fast.
+这只狗跑得很快。
+那条狗跑得很快
+
+>>cmn_Hans<< This beach is a paradise for surfers.
+这个海滩是冲浪者的天堂。
+海滩是冲浪者的天堂
+
+>>cmn_Hans<< I must catch the first train.
+我必须赶上头班火车。
+我必须赶第一班火车
+
+>>cmn_Hans<< He encountered difficulties in his work.
+他在工作上遇到了麻烦。
+他在工作中遇到了困难。
+
+>>cmn_Hans<< I have returned.
+我回来了。
+我回来了
+
+>>cmn_Hans<< This book is difficult to read as it is written in French.
+因为是用法文写的，所以这本书很难读。
+这本书以法文撰写,很难读懂。
+
+>>cmn_Hans<< I've already put Tom to work on it.
+我已经让汤姆去做它了。
+我已经让汤姆去研究它了
+
+>>cmn_Hans<< There's nothing to be afraid of.
+没什么好怕的。
+没什么好怕的
+
+>>cmn_Hans<< By reading books we can walk with the great and the good from every place and every era.
+在书中，我们可以跟各个时代、各个地方的智者仁人同行。
+通过阅读书,我们可以走 伟大的和好 从每一个地方和每一个时代。
+
+>>cmn_Hans<< Mary told John the secret.
+玛丽把那个秘密告诉给了约翰。
+玛丽告诉了约翰这个秘密
+
+>>cmn_Hans<< There are a lot of hot springs in Japan.
+日本有很多温泉。
+日本有很多温泉
+
+>>cmn_Hans<< My head hurts.
+我头疼。
+我的头好痛
+
+>>cmn_Hans<< The children rolled down the hill.
+孩子从山上滚了下来。
+孩子们从山上滚下来了
+
+>>cmn_Hans<< He is a teacher.
+他是老师。
+他是一个老师。
+
+>>cmn_Hans<< Can you freeze it?
+你能冷冻它吗？
+你能冻死它吗?
+
+>>cmn_Hans<< His house is somewhere about here.
+他家在这儿某处。
+他的房子就在这附近
+
+>>cmn_Hans<< Why do you study every day?
+为什么你每天都学习呢？
+为什么你每天都在读书?
+
+>>cmn_Hans<< It is very dangerous to jump aboard the train when it is moving.
+跳上一列正在开的火车是很危险的。
+当火车在移动时跳上火车是非常危险的。
+
+>>cmn_Hans<< I always take a bath before going to bed.
+我睡觉前总要洗个澡。
+我总是在睡觉前洗个澡
+
+>>cmn_Hans<< I want you to bring Tom a letter.
+我想让你给汤姆带个信。
+我要你带封信给汤姆
+
+>>cmn_Hans<< You have a way with women.
+你对女人有一套。
+你对女人很有一套
+
+>>cmn_Hans<< A new team was formed in order to take part in the boat race.
+为了参加划船比赛，一支新的队伍组成了。
+为了参加赛船比赛,成立了一个新的团队。
+
+>>cmn_Hans<< In my opinion, the meeting was a success.
+在我看来，这次会议很成功。
+我认为,这次会议是成功的。
+
+>>cmn_Hans<< That architect builds very modern houses.
+那个建筑师创建了非常现代的房屋。
+那个建筑师建造了非常现代化的房子。
+
+>>cmn_Hans<< Bringing up a baby is hard work.
+养大一个宝宝是一项艰难的工作。
+带孩子是很辛苦的
+
+>>cmn_Hans<< If a tiger suddenly appeared in front of me, I'd be scared to death.
+如果一只老虎突然出现在我面前，我肯定吓死了。
+如果一只老虎突然出现在我面前 我会害怕得要死
+
+>>cmn_Hans<< John is a good friend.
+约翰是个好朋友。
+约翰是个好朋友
+
+>>cmn_Hans<< We have some decisions to make.
+我们要做些决定。
+我们有一些决定要做。
+
+>>cmn_Hans<< I don't understand German at all.
+我完全不懂德语。
+我完全不懂德语
+
+>>cmn_Hans<< Jean has fallen out with Paul over the education of their children.
+Jean和Paul为他们孩子的教育吵了起来。
+让因为孩子的教育而和保罗分手了
+

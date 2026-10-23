@@ -21,6 +21,7 @@ import numpy as np
 from .asr_offline import OfflineAsr
 from .clauses import ClauseSplitter, meaningful
 from .llm_axllm import AxLlmTranslator
+from .opus_mt import OpusMtTranslator
 from .tts_service import TtsService
 from .tts_zipvoice import FRAME as TTS_FRAME
 from .tts_zipvoice import SR as TTS_SR
@@ -97,21 +98,46 @@ class Components:
         self.cfg = cfg
         self.mock = mock
         self.asr = None if mock else OfflineAsr(cfg)
-        self.llm = None if mock else AxLlmTranslator(cfg)
         self.tts = None if mock else ZipVoiceTts(cfg)
+        self.llm_qwen = None
+        self.llm_opus = None
+        self.llm = None
+        if not mock:
+            if cfg["llm"].get("qwen_enabled", True):
+                self.llm_qwen = AxLlmTranslator(cfg)
+            if cfg["llm"].get("opus_enabled", True):
+                self.llm_opus = OpusMtTranslator(cfg)
+            self.set_mt_backend(cfg["llm"].get("backend", "opus"))
+
+    def set_mt_backend(self, backend: str) -> str:
+        backend = "qwen" if backend == "qwen" else "opus"
+        obj = self.llm_qwen if backend == "qwen" else self.llm_opus
+        if obj is None:
+            obj = self.llm_opus if backend == "qwen" else self.llm_qwen
+            backend = "opus" if obj is self.llm_opus else "qwen"
+        self.mt_backend = backend
+        self.llm = obj
+        return self.mt_backend
 
     def preload(self):
         if self.mock:
             return
-        if self.llm is not None:
+        for name, obj in (("qwen", self.llm_qwen), ("opus", self.llm_opus)):
+            if obj is None:
+                continue
             try:
-                self.llm.start(wait=True)
-                print("[llm] qwen3-0.6b ready", flush=True)
+                obj.start(wait=True)
+                print(f"[llm] {name} ready", flush=True)
                 t0 = time.time()
-                self.llm.translate("你好。", "en")
-                print(f"[llm] warmup {time.time() - t0:.1f}s", flush=True)
+                obj.translate("你好。", "en")
+                print(f"[llm] {name} warmup {time.time() - t0:.1f}s", flush=True)
             except Exception:
                 traceback.print_exc()
+                if name == "qwen":
+                    self.llm_qwen = None
+                else:
+                    self.llm_opus = None
+        self.set_mt_backend(self.mt_backend)
         if self.asr is not None:
             try:
                 self.asr.load()
@@ -130,10 +156,13 @@ class Components:
                 self.tts = None
 
     def close(self):
-        for obj in (self.asr, self.llm, self.tts):
+        seen = set()
+        for obj in (self.asr, self.llm_qwen, self.llm_opus, self.tts):
+            if obj is None or id(obj) in seen:
+                continue
+            seen.add(id(obj))
             try:
-                if obj is not None:
-                    obj.close()
+                obj.close()
             except Exception:
                 pass
 

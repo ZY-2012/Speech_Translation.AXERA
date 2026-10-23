@@ -18,3 +18,8 @@ __pycache__/
 *.pyo
 *.log
 .DS_Store
+third_party/opus_mt/src/.git/
+third_party/opus_mt/src/cpp/build_ax650/
+third_party/opus_mt/src/cpp/bin/
+third_party/opus_mt/src/cpp/third_party/sentencepiece/
+third_party/opus_mt/src/cpp/third_party/sentencepiece_build/
