@@ -1,0 +1,95 @@
+# Speech-Translation-ZipVoice
+
+AX650N 板端实时语音翻译：**离线 SenseVoice → Qwen3-0.6B → ZipVoice Distill（语音克隆）**。
+
+这个工程与旧的 `Streaming-Speech-Translation` 完全独立：
+
+- ASR 改为**非流式小句识别**，避免 0.2 s 短段产生 `i뭐the` 这类乱码；
+- TTS 使用 **ZipVoice.AXERA distill C++ 常驻 worker**，不再使用 Pocket-TTS；
+- 原文/译文合并成一个对话流，一句原文一句译文；
+- 模型全部在主机/NFS，不下载到板端本地盘。
+
+## 目录
+
+```
+app/
+  asr_offline.py      # AX_ASR_RunPCM 非流式 SenseVoice
+  tts_zipvoice.py     # ZipVoice C++ 常驻 worker 客户端
+  pipeline.py         # VAD -> ASR -> 小句 MT -> ZipVoice
+  llm_axllm.py        # Qwen3-0.6B axllm OpenAI 流式接口
+  server.py           # HTTP/HTTPS + WebSocket
+static/index.html     # 单对话流 UI
+config/board.yaml
+models/
+  asr_official/...
+  qwen3-0.6b/
+  zipvoice/
+    bin/zipvoice_worker
+    models/zipvoice_distill_ax650/
+    models/vocoder/vocos_full.axmodel
+    resources/zipvoice_hf/zipvoice/tokens.txt
+    assets/moss_prompts/
+    scripts/          # pypinyin + piper_phonemize tokenizer
+    cpp/scripts/py_daemon.py
+third_party/
+  asr/lib/libax_asr_api.so
+  llm/axllm
+  zipvoice/src/       # C++ source and zipvoice_worker.cpp
+runtime/
+  python/             # portable aarch64 Python 3.11
+  pylibs/             # numpy/scipy/pypinyin/piper_phonemize/...
+```
+
+## 板端启动
+
+启动前确认旧的 `Streaming-Speech-Translation` 服务已经停掉，否则两套
+ASR/TTS 模型会同时占 NPU。
+
+```bash
+cd /root/huyuan/183_workspace/Speech-Translation-ZipVoice
+bash scripts/run_board.sh
+```
+
+端口：
+
+- HTTP：`http://<board-ip>:8096/`（WAV 模拟麦克风）
+- HTTPS：`https://<board-ip>:8444/`（真实麦克风，需接受自签名证书）
+
+麦克风必须使用 HTTPS 或 `localhost`。也可以：
+
+```bash
+ssh -L 8096:localhost:8096 root@<board-ip>
+# 打开 http://localhost:8096/
+```
+
+首轮启动会加载离线 ASR、Qwen 和 ZipVoice；模型缓存后会明显变快。
+
+## 关键参数
+
+`config/board.yaml`：
+
+- `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
+- `audio.trailing_silence_ms: 500`：闭句等待，减少一句话被切成碎片；
+- `audio.sentence_merge_ms: 800`：相邻 ASR 段在 0.8 s 内继续出现时合并成一句，再送 MT/TTS；
+- `audio.max_segment_ms: 4000`：最长小句，避免等整段长语音；
+- `asr.backend: offline`：每段调用 `AX_ASR_RunPCM`，输出带标点文本；
+- `tts.engine: zipvoice`：ZipVoice distill；
+- `tts.prompt_wav/prompt_text`：默认英文克隆参考音；
+- `tts.clause_max_chars: 40`：目标小句长度，控制首帧等待。
+
+## 已验证
+
+- 离线 SenseVoice：6.6 s 音频约 0.21 s，RTF ≈ 0.03，输出带中文标点；
+- ZipVoice distill C++：短句约 RTF 0.7（首句有固定 decoder 开销），模型常驻后不再重载；
+- 完整 WSS：离线 ASR 定稿、Qwen 翻译、ZipVoice PCM 回传正常；
+- 0.6 s 以下语音段被丢弃，不再产生短段乱码；
+- 页面上的“识别”指标现在只显示真实 ASR 耗时；800ms 左右是 `sentence_merge_ms` 的合并等待，会单独显示在 meta 里。
+
+## 限制
+
+- 非流式 ASR 在段末才出字，适合“小句级同时传译”，不是逐字字幕；
+- ZipVoice 是整小句合成后输出 PCM，首帧约 1–1.5 s；不是逐音素流式；
+- 当前默认英文克隆参考音，适合中文→英文；反向翻译可替换 `prompt_wav/prompt_text`；
+- 译文音频时长可能长于源语音，连续长时说话仍需要变速或更简洁的译文来控制积压；
+- **防回声默认开启（页面 + 服务端双重）**：译音播放期间麦克风和 ASR 输入都会被静音，避免扬声器声音被再次识别成 `The.` / `Ran.` / `Yeah.`。戴耳机时可以取消该勾选，恢复边说边译；
+- ZipVoice 的 `num_step=3` / `speed=1.1` 更快配置实测会丢词（`The process of trial.` 只读出 `The process.`），所以默认保留 **4 步 + speed 1.0**；首帧约 1.4 s。

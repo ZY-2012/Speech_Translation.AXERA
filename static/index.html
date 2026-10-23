@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>实时语音翻译 · AX650N / ZipVoice</title>
+<style>
+  :root{
+    --bg:#0c1117; --panel:#131b24; --panel2:#18222d; --line:#243140;
+    --txt:#e8eef5; --dim:#8ea0b4; --accent:#39d0a3; --accent2:#59a7ff;
+    --warn:#ffb454; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a0f14,#0d141c 40%,#0a0f14);
+       color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",
+       "PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;
+         border-bottom:1px solid var(--line);background:rgba(12,17,23,.85);
+         position:sticky;top:0;z-index:5;backdrop-filter:blur(8px)}
+  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.3px}
+  header .sub{color:var(--dim);font-size:12px}
+  .pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .pill{border:1px solid var(--line);background:var(--panel);color:var(--dim);
+        padding:3px 9px;border-radius:999px;font-size:11.5px;white-space:nowrap}
+  .pill.on{color:#0a1410;background:var(--accent);border-color:var(--accent)}
+  .pill.warn{color:#1a1205;background:var(--warn);border-color:var(--warn)}
+  main{padding:18px 22px 28px;max-width:1400px;margin:0 auto}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  button{border:1px solid var(--line);background:var(--panel);color:var(--txt);
+         padding:8px 16px;border-radius:9px;font-size:13.5px;cursor:pointer;
+         transition:.15s all}
+  button:hover:not(:disabled){border-color:#3a4c60;background:var(--panel2)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:linear-gradient(180deg,#3ee0ad,#2ab98a);color:#06120d;
+                  border-color:#2ab98a;font-weight:650}
+  button.danger{background:#3a1d22;border-color:#6d2c36;color:#ffb3bd}
+  button.ptt{background:#123047;border-color:#20557c;color:#9fd4ff}
+  button.ptt.active{background:var(--accent2);color:#04121f;border-color:var(--accent2)}
+  select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
+         border-radius:9px;padding:8px 10px;font-size:13px}
+  .switch{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:13px;
+          user-select:none;cursor:pointer}
+  .switch input{accent-color:var(--accent);width:16px;height:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+        overflow:hidden;min-height:360px;display:flex;flex-direction:column}
+  .card h2{margin:0;padding:10px 14px;font-size:12.5px;font-weight:600;
+           letter-spacing:.6px;color:var(--dim);border-bottom:1px solid var(--line);
+           display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.015)}
+  .card h2 .tag{font-size:10.5px;padding:2px 7px;border-radius:999px;
+                background:#1d2a38;color:#9fb4c9;font-weight:500}
+  .stream{flex:1;padding:14px 16px;overflow-y:auto;max-height:52vh}
+  .line{margin:0 0 12px;padding-left:10px;border-left:2px solid #223041}
+  .line .meta{font-size:11px;color:#657a90;margin-bottom:2px;font-variant-numeric:tabular-nums}
+  .line .text{white-space:pre-wrap;word-break:break-word}
+  .partial{color:#9fb4c9;font-style:italic;min-height:1.6em;padding:0 0 8px;
+           border-bottom:1px dashed #233140;margin-bottom:12px;white-space:pre-wrap}
+  .partial::before{content:"▍ ";color:var(--accent);font-style:normal}
+  .partial:empty::before{content:""}
+  #transPartial{color:#a9ffe1;font-style:normal}
+  #transPartial::before{content:"▶ ";color:var(--accent2)}
+  .empty{color:#4f6275;font-size:13px;text-align:center;padding:40px 0}
+  .transcript-wrap{max-width:980px;margin:0 auto}
+  .card.wide{min-height:420px}
+  .pair{padding:11px 4px 12px;border-bottom:1px solid #1e2b38;border-left:2px solid #25384a;padding-left:12px;margin-bottom:4px;transition:.2s background}
+  .pair:last-child{border-bottom:0}
+  .pair.playing{background:rgba(57,208,163,.06);border-left-color:var(--accent)}
+  .pair .meta{font-size:11px;color:#657a90;font-variant-numeric:tabular-nums;margin-bottom:3px}
+  .pair .src{color:#a9b8c8;font-size:14px;margin-bottom:3px}
+  .pair .src::before{content:"原  ";color:#5f7b95;font-size:11px;letter-spacing:.5px}
+  .pair .dst{color:#eafff8;font-size:16px;font-weight:520;line-height:1.55}
+  .pair .dst::before{content:"译  ";color:var(--accent);font-size:11px;letter-spacing:.5px}
+  .pair .dst:empty::after{content:"…";color:#4f6275}
+  .latency{margin-top:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  @media(max-width:900px){.latency{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .metric .k{color:var(--dim);font-size:11px}
+  .metric .v{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:2px}
+  .metric .v small{font-size:11px;color:var(--dim);font-weight:400}
+  .bar{height:5px;background:#1b2632;border-radius:99px;overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
+  .hint{color:#5f7387;font-size:12px;margin-top:10px}
+  .log{margin-top:14px;background:#0a1016;border:1px solid var(--line);border-radius:11px;
+       padding:10px 12px;height:96px;overflow:auto;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#7f93a8}
+  .dot{width:7px;height:7px;border-radius:50%;background:#3a4a5c;display:inline-block}
+  .dot.live{background:var(--accent);box-shadow:0 0 0 0 rgba(57,208,163,.6);animation:pulse 1.4s infinite}
+  .dot.rec{background:var(--bad);animation:pulse 1s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(57,208,163,.5)}70%{box-shadow:0 0 0 7px rgba(57,208,163,0)}100%{box-shadow:0 0 0 0 rgba(57,208,163,0)}}
+  .warnbox{display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;
+           background:#2a1f10;border:1px solid #5c4520;color:#ffcf8a;font-size:13px}
+  .warnbox.show{display:block}
+</style>
+</head>
+<body>
+<header>
+  <h1>实时语音翻译</h1>
+  <span class="sub">AX650N · 离线 SenseVoice → Qwen3 → ZipVoice Distill</span>
+  <div class="pills" id="pills">
+    <span class="pill" id="pillWs">未连接</span>
+    <span class="pill" id="pillAsr">ASR —</span>
+    <span class="pill" id="pillLlm">MT —</span>
+    <span class="pill" id="pillTts">TTS —</span>
+  </div>
+</header>
+<main>
+  <div class="warnbox" id="warnbox"></div>
+  <div class="controls">
+    <button class="primary" id="btnStart">开始</button>
+    <button class="danger" id="btnStop" disabled>停止</button>
+    <button class="ptt" id="btnPtt" title="按住说话，松开静音">按住说话</button>
+    <select id="selDir" title="翻译方向">
+      <option value="auto">自动方向</option>
+      <option value="en">中文 → English</option>
+      <option value="zh">English → 中文</option>
+    </select>
+    <label class="switch"><input type="checkbox" id="chkPlay" checked> 播放译音</label>
+    <label class="switch" title="免提/扬声器时防止译音被麦克风重新识别"><input type="checkbox" id="chkEcho" checked> 防回声（译音时静音麦克风）</label>
+    <label class="switch"><input type="checkbox" id="chkPtt"> 仅按住时发送</label>
+    <label class="switch"><input type="checkbox" id="chkBarge"> 新语音打断 TTS</label>
+    <span class="hint" id="stateHint">点击“开始”并允许麦克风</span>
+  </div>
+
+  <div class="controls" style="margin-top:-4px">
+    <span class="hint" style="color:#7fd7ff">音频模拟麦克风</span>
+    <select id="selSample" title="用 WAV 实时喂给服务端，模拟麦克风"></select>
+    <button class="ptt" id="btnSim">播放并模拟</button>
+    <button id="btnSimStop" disabled>停止模拟</button>
+    <label class="switch"><input type="checkbox" id="chkSimLoop"> 循环</label>
+    <span class="hint" id="simHint">无需麦克风权限，HTTP 页面可直接使用</span>
+  </div>
+
+  <div class="transcript-wrap">
+    <section class="card wide">
+      <h2>对话流 <span class="tag" id="modeTag">原文 / 译文</span></h2>
+      <div class="stream" id="transcript">
+        <div class="partial" id="livePartial"></div>
+        <div id="pairLines"></div>
+        <div class="empty" id="pairEmpty">等待语音…</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="latency">
+    <div class="metric"><div class="k">出声 → 出字</div><div class="v" id="mAsr">—</div><div class="bar"><i id="bAsr"></i></div></div>
+    <div class="metric"><div class="k">ASR 识别（不含合并等待）</div><div class="v" id="mFin">—</div><div class="bar"><i id="bFin"></i></div></div>
+    <div class="metric"><div class="k">定稿 → 译文</div><div class="v" id="mMt">—</div><div class="bar"><i id="bMt"></i></div></div>
+    <div class="metric"><div class="k">译文 → 首帧音</div><div class="v" id="mTts">—</div><div class="bar"><i id="bTts"></i></div></div>
+    <div class="metric"><div class="k">开口/闭句 → 首帧音</div><div class="v" id="mE2e">—</div><div class="bar"><i id="bE2e"></i></div></div>
+  </div>
+  <div class="log" id="log"></div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const S = {
+    ws: null, started: false, pttMode: false, pttDown: false, play: true,
+    micCtx: null, playCtx: null, stream: null, proc: null, source: null,
+    sendRate: 16000, resamplePhase: 0, resamplePrev: 0, echoGuard: true, echoMuted: false,
+    sources: [], nextPlay: 0, ttsQueue: 0, firstTs: null,
+    segCount: 0, ttsFrames: 0, speechStart: 0, m: {},
+    simTimer: null, simActive: false, simPcm: null, simPos: 0, simTail: 0,
+  };
+
+  const log = (msg) => {
+    const el = $("log");
+    const t = new Date().toLocaleTimeString("zh-CN", {hour12:false});
+    el.textContent += `[${t}] ${msg}\n`;
+    el.scrollTop = el.scrollHeight;
+  };
+  const setPill = (id, text, cls) => { const el=$(id); el.textContent=text; el.className="pill"+(cls?" "+cls:""); };
+  const fmt = (v, unit="ms") => v==null||isNaN(v) ? "—" : (v>=1000 ? (v/1000).toFixed(2)+" s" : Math.round(v)+" "+unit);
+  const metric = (id, bar, v, max) => {
+    $(id).textContent = v==null ? "—" : fmt(v);
+    $(bar).style.width = v==null ? "0%" : Math.min(100, 100*v/(max||3000))+"%";
+  };
+  const now = () => performance.now();
+  const online = () => S.ws && S.ws.readyState === WebSocket.OPEN;
+
+  // ---------------------------------------------------------------- websocket
+  function connect() {
+    const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+    ws.binaryType = "arraybuffer";
+    S.ws = ws;
+    ws.onopen = () => {
+      setPill("pillWs", "已连接", "on");
+      log("WebSocket 已连接");
+    };
+    ws.onclose = () => {
+      setPill("pillWs", "已断开", "warn");
+      if (S.started) stopAll(false);
+      setTimeout(connect, 1500);
+    };
+    ws.onerror = () => log("WebSocket 错误");
+    ws.onmessage = (ev) => {
+      if (typeof ev.data === "string") onEvent(JSON.parse(ev.data));
+      else onAudio(ev.data);
+    };
+  }
+
+  function send(obj) { if (online()) S.ws.send(JSON.stringify(obj)); }
+
+  function onEvent(m) {
+    switch (m.type) {
+      case "hello":
+        if (m.status) applyStatus(m.status);
+        break;
+      case "status":
+        if (m.status) applyStatus(m.status);
+        break;
+      case "ready":
+        setPill("pillAsr", "ASR 就绪", "on");
+        log("会话已开始");
+        break;
+      case "speech_start":
+        setHint("检测到语音…");
+        S.speechStart = now();
+        S.m = {};
+        $("livePartial").textContent = "正在听…";
+        $("livePartial").classList.add("live");
+        break;
+      case "asr_partial":
+        $("livePartial").textContent = m.text || "";
+        break;
+      case "speech_end":
+        setHint("闭句 " + (m.seconds||0).toFixed(2) + " s，识别中…");
+        $("livePartial").textContent = "识别中…";
+        break;
+      case "speech_skipped":
+        log(`忽略过短语音 ${m.seconds}s`);
+        $("livePartial").textContent = "";
+        break;
+      case "asr_final": {
+        const p = ensurePair(m.uid);
+        p.meta.textContent = `#${m.uid} · ${m.audio_s}s 语音 · 识别 ${Math.round(m.asr_ms||0)}ms`
+          + (m.merge_ms ? ` · 合并等待 ${Math.round(m.merge_ms)}ms` : "");
+        typeText(p.src, m.text);
+        $("livePartial").textContent = "";
+        $("pairEmpty").style.display = "none";
+        metric("mFin", "bFin", m.asr_ms != null ? m.asr_ms : m.latency_ms, 1000);
+        S.m.fin = m.asr_ms || 0;
+        S.firstTs = { end: now() };
+        break;
+      }
+      case "trans_token": {
+        const p = ensurePair(m.uid);
+        p.dst.textContent += m.text || "";
+        $("pairEmpty").style.display = "none";
+        break;
+      }
+      case "trans_final": {
+        const p = ensurePair(m.uid);
+        p.dst.textContent = m.text || "";
+        p.meta.textContent += ` · MT ${Math.round(m.ms||0)}ms` + (m.ttft_ms ? ` / 首token ${Math.round(m.ttft_ms)}ms` : "");
+        metric("mMt", "bMt", m.ms, 3000);
+        S.m.mt = m.ms || 0;
+        break;
+      }
+      case "tts_start":
+        S.ttsFrames = 0;
+        if (!S.play) log("TTS 已生成（播放已关闭）");
+        break;
+      case "tts_first_frame":
+        { const p = ensurePair(m.uid); p.el.classList.add("playing"); }
+        metric("mTts", "bTts", m.ms, 1000);
+        S.m.tts = m.ms || 0;
+        // Server-side: first clause submission to first PCM of this utterance,
+        // measured from its speech_end.  This is the real end-to-end latency.
+        if (m.since_speech_end_ms != null) {
+          metric("mE2e", "bE2e", m.since_speech_end_ms, 5000);
+        } else if (m.since_speech_start_ms != null) {
+          metric("mE2e", "bE2e", m.since_speech_start_ms, 5000);
+        }
+        log(`TTS 首帧 ${Math.round(m.ms||0)} ms` +
+            (m.since_speech_end_ms != null
+              ? ` · 闭句→出声 ${Math.round(m.since_speech_end_ms)} ms`
+              : (m.since_speech_start_ms != null
+                 ? ` · 开口→出声 ${Math.round(m.since_speech_start_ms)} ms` : "")));
+        break;
+      case "tts_end": {
+        const p = ensurePair(m.uid); p.el.classList.remove("playing");
+        log(`TTS 完成：${m.frames} 帧 / ${Math.round(m.ms||0)} ms` + (m.cancelled ? "（被新语音打断）" : ""));
+        break;
+      }
+      case "tts_cancel":
+        clearAudio();
+        break;
+      case "asr_empty":
+        log("未识别到有效文本");
+        $("livePartial").textContent = "";
+        break;
+      case "error":
+        log("错误：" + (m.message || "unknown"));
+        $("warnbox").textContent = m.message || "处理失败";
+        $("warnbox").classList.add("show");
+        break;
+      case "stopped":
+        log("会话已停止");
+        break;
+    }
+    if (m.t != null) S.lastEventT = m.t;
+  }
+
+  function applyStatus(st) {
+    setPill("pillAsr", st.asr_offline ? "ASR 就绪" : (st.asr_stream ? "ASR 流式" : "ASR 加载中"), st.asr_offline||st.asr_stream ? "on" : "warn");
+    setPill("pillLlm", st.llm ? "MT 就绪" : "MT 加载中", st.llm ? "on" : "warn");
+    setPill("pillTts", st.tts ? "TTS 就绪" : "TTS 加载中", st.tts ? "on" : "warn");
+    if (st.mock) log("mock 模式：无 NPU 模型");
+  }
+
+  function addLine(container, text, meta) {
+    const box = $(container);
+    const div = document.createElement("div");
+    div.className = "line";
+    div.innerHTML = `<div class="meta"></div><div class="text"></div>`;
+    div.querySelector(".meta").textContent = meta || "";
+    div.querySelector(".text").textContent = text || "";
+    box.appendChild(div);
+    box.parentElement.scrollTop = box.parentElement.scrollHeight;
+  }
+
+  function ensurePair(uid) {
+    let el = document.getElementById("pair-" + uid);
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "pair";
+      el.id = "pair-" + uid;
+      el.innerHTML = `<div class="meta"></div><div class="src"></div><div class="dst"></div>`;
+      $("pairLines").appendChild(el);
+    }
+    return {el, meta: el.querySelector(".meta"),
+            src: el.querySelector(".src"), dst: el.querySelector(".dst")};
+  }
+
+  function typeText(el, text) {
+    if (el._timer) clearInterval(el._timer);
+    const full = text || "";
+    el.textContent = "";
+    let i = 0;
+    el._timer = setInterval(() => {
+      el.textContent = full.slice(0, ++i);
+      if (i >= full.length) { clearInterval(el._timer); el._timer = null; }
+      $("transcript").scrollTop = $("transcript").scrollHeight;
+    }, 18);
+  }
+
+  function setHint(t) { $("stateHint").textContent = t; }
+
+  // ---------------------------------------------------------------- mic input
+  async function startMic() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("浏览器不支持麦克风采集");
+    }
+    if (!window.isSecureContext && location.hostname !== "localhost") {
+      $("warnbox").textContent = "浏览器要求 HTTPS 或 localhost 才能使用麦克风；请用 http://localhost 或配置证书。";
+      $("warnbox").classList.add("show");
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+              channelCount: 1, sampleRate: 16000},
+      video: false,
+    });
+    S.stream = stream;
+    let ctx;
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000});
+    } catch (e) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    S.micCtx = ctx;
+    await ctx.resume();
+    S.sendRate = ctx.sampleRate;
+    const src = ctx.createMediaStreamSource(stream);
+    const proc = ctx.createScriptProcessor(1024, 1, 1);
+    S.proc = proc;
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    src.connect(proc);
+    proc.connect(mute);
+    mute.connect(ctx.destination);
+    proc.onaudioprocess = (e) => {
+      if (!S.started) return;
+      const input = e.inputBuffer.getChannelData(0);
+      // Half-duplex echo guard for laptop/phone speakers: while the TTS
+      // queue is playing (or about to play), send silence so the microphone
+      // does not re-recognise the translated voice as a new utterance.
+      if (S.echoGuard && S.playCtx && S.nextPlay > S.playCtx.currentTime + 0.05) {
+        const n = Math.max(1, Math.floor(input.length * 16000 / S.sendRate));
+        if (online()) S.ws.send(new Int16Array(n).buffer);
+        if (!S.echoMuted) {
+          S.echoMuted = true;
+          log("译音播放中：麦克风静音防回声（可取消勾选）");
+        }
+        return;
+      }
+      if (S.echoMuted) { S.echoMuted = false; log("麦克风恢复"); }
+      if (S.pttMode && !S.pttDown) {
+        // Keep the VAD clock running so releasing PTT closes the utterance.
+        const n = Math.max(1, Math.floor(input.length * 16000 / S.sendRate));
+        if (online()) S.ws.send(new Int16Array(n).buffer);
+        return;
+      }
+      const pcm = resampleTo16k(input, S.sendRate);
+      if (online() && pcm.length) S.ws.send(pcm.buffer);
+    };
+    log(`麦克风已开启：${S.sendRate} Hz → 16000 Hz`);
+  }
+
+  // Persistent decimator/interpolator to 16 kHz.  `step` is expressed in
+  // input samples per output sample (3 for 48 kHz), so 1024 input samples
+  // produce ~341 output samples, not 3072.
+  function resampleTo16k(input, inRate) {
+    if (inRate === 16000) return toInt16(input);
+    const step = inRate / 16000;
+    const out = [];
+    let phase = S.resamplePhase || 0;
+    let prev = S.resamplePrev || input[0];
+    for (let i = 0; i < input.length; i++) {
+      const cur = input[i];
+      phase += 1;
+      while (phase >= step) {
+        phase -= step;
+        const frac = 1 - phase / step;
+        out.push(prev + (cur - prev) * frac);
+      }
+      prev = cur;
+    }
+    S.resamplePhase = phase;
+    S.resamplePrev = prev;
+    return toInt16(out);
+  }
+  function toInt16(arr) {
+    const out = new Int16Array(arr.length);
+    for (let i = 0; i < arr.length; i++) {
+      let v = Math.max(-1, Math.min(1, arr[i]));
+      out[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+    }
+    return out;
+  }
+
+  function stopMic() {
+    if (S.proc) { try { S.proc.disconnect(); } catch(e){} S.proc.onaudioprocess = null; S.proc = null; }
+    if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+    if (S.micCtx) { try { S.micCtx.close(); } catch(e){} S.micCtx = null; }
+  }
+
+  // ---------------------------------------------------------------- TTS output
+  function ensurePlayCtx() {
+    if (!S.playCtx) {
+      S.playCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 24000});
+      S.nextPlay = 0;
+    }
+    if (S.playCtx.state === "suspended") S.playCtx.resume();
+    return S.playCtx;
+  }
+
+  function onAudio(buf) {
+    const view = new Uint8Array(buf);
+    if (view.length < 3 || view[0] !== 1) return;
+    if (!S.play) { S.ttsFrames++; return; }
+    const ctx = ensurePlayCtx();
+    // Copy past the 1-byte frame tag: Int16Array needs an even byte offset.
+    const pcmBytes = view.slice(1);
+    const pcm = new Int16Array(pcmBytes.buffer, 0, pcmBytes.length >> 1);
+    const audio = ctx.createBuffer(1, pcm.length, 24000);
+    const ch = audio.getChannelData(0);
+    for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+    const src = ctx.createBufferSource();
+    src.buffer = audio;
+    src.connect(ctx.destination);
+    const start = Math.max(ctx.currentTime + 0.06, S.nextPlay || 0);
+    src.start(start);
+    S.nextPlay = start + audio.duration;
+    S.sources.push(src);
+    S.ttsFrames++;
+    src.onended = () => { S.sources = S.sources.filter(s => s !== src); };
+  }
+
+  function clearAudio() {
+    S.sources.forEach(s => { try { s.stop(); } catch(e){} });
+    S.sources = [];
+    S.nextPlay = 0;
+    S.echoMuted = false;
+  }
+
+  // ---------------------------------------------------------- audio simulation
+  async function loadSamples() {
+    try {
+      const res = await fetch("/api/samples");
+      const list = await res.json();
+      const sel = $("selSample");
+      sel.innerHTML = "";
+      for (const s of list) {
+        const opt = document.createElement("option");
+        opt.value = s.url;
+        opt.textContent = `${s.name} (${s.duration}s)`;
+        sel.appendChild(opt);
+      }
+      const preferred = list.find(x => x.name === "zh_30s.wav") || list.find(x => x.name === "vad_example.wav");
+      if (preferred) sel.value = preferred.url;
+      if (!list.length) {
+        const opt = document.createElement("option");
+        opt.textContent = "samples/ 下没有 WAV";
+        sel.appendChild(opt);
+      }
+    } catch (e) { log("读取样例列表失败：" + e.message); }
+  }
+
+  async function decodeToPcm16k(url) {
+    const buf = await (await fetch(url)).arrayBuffer();
+    const tmp = new (window.AudioContext || window.webkitAudioContext)();
+    const audio = await tmp.decodeAudioData(buf.slice(0));
+    const frames = Math.max(1, Math.ceil(audio.duration * 16000));
+    const off = new OfflineAudioContext(1, frames, 16000);
+    const src = off.createBufferSource();
+    src.buffer = audio;
+    src.connect(off.destination);
+    src.start();
+    const rendered = await off.startRendering();
+    const f = rendered.getChannelData(0);
+    const pcm = new Int16Array(f.length);
+    for (let i = 0; i < f.length; i++) {
+      let v = Math.max(-1, Math.min(1, f[i]));
+      pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+    }
+    try { tmp.close(); } catch (e) {}
+    return pcm;
+  }
+
+  function clearSim() {
+    if (S.simTimer) { clearInterval(S.simTimer); S.simTimer = null; }
+    S.simActive = false;
+    S.simPcm = null;
+    S.simPos = 0;
+    S.simTail = 0;
+    $("btnSim").disabled = false;
+    $("btnSimStop").disabled = true;
+  }
+
+  async function startSim() {
+    if (!online()) { log("尚未连接服务器"); return; }
+    if (S.simActive) return;
+    ensurePlayCtx();
+    if (S.started) {
+      stopAll(true);
+      setTimeout(startSim, 400);
+      return;
+    }
+    const url = $("selSample").value;
+    if (!url) { log("没有可用的样例音频"); return; }
+    $("btnSim").disabled = true;
+    $("simHint").textContent = "解码音频…";
+    let pcm;
+    try {
+      pcm = await decodeToPcm16k(url);
+    } catch (e) {
+      log("解码失败：" + e.message);
+      $("btnSim").disabled = false;
+      $("simHint").textContent = "解码失败";
+      return;
+    }
+    send({type: "start"});
+    send({type: "set_barge_in", value: $("chkBarge").checked});
+    S.started = true;
+    $("btnStart").disabled = true;
+    $("btnStop").disabled = false;
+    $("btnSimStop").disabled = false;
+    S.simPcm = pcm;
+    S.simPos = 0;
+    S.simTail = 60;          // 1.2 s of silence closes the last utterance
+    S.simActive = true;
+    $("simHint").textContent = `模拟中：${(pcm.length / 16000).toFixed(1)} s`;
+    log(`开始模拟麦克风：${url}（${(pcm.length / 16000).toFixed(1)} s）`);
+    const CHUNK = 320;       // 20 ms @ 16 kHz
+    S.simTimer = setInterval(() => {
+      if (!S.simActive || !online()) return;
+      if (S.ws.bufferedAmount > 512 * 1024) return;  // don't flood a slow link
+      if (S.simPos < S.simPcm.length) {
+        const end = Math.min(S.simPos + CHUNK, S.simPcm.length);
+        S.ws.send(S.simPcm.slice(S.simPos, end).buffer);
+        S.simPos = end;
+      } else if (S.simTail > 0) {
+        S.ws.send(new Int16Array(CHUNK).buffer);
+        S.simTail--;
+      } else if ($("chkSimLoop").checked) {
+        S.simPos = 0;
+        S.simTail = 60;       // pause between loops so the last turn closes
+        $("simHint").textContent = "循环模拟中…";
+      } else {
+        clearInterval(S.simTimer);
+        S.simTimer = null;
+        S.simActive = false;
+        $("btnSim").disabled = false;
+        $("simHint").textContent = "模拟播放结束；可勾选“循环”持续测试";
+        log("模拟音频发送完毕，等待最后一段翻译/译音");
+      }
+    }, 20);
+  }
+
+  function stopSim(sendStop = true) {
+    clearSim();
+    if (S.started) {
+      if (sendStop && online()) send({type: "stop"});
+      S.started = false;
+      stopMic();
+      clearAudio();
+      $("btnStart").disabled = false;
+      $("btnStop").disabled = true;
+    }
+    $("simHint").textContent = "已停止模拟";
+  }
+
+  // ---------------------------------------------------------------- controls
+  async function startAll() {
+    try {
+      if (!online()) { log("尚未连接服务器"); return; }
+      if (S.simActive) { stopSim(true); await new Promise(r => setTimeout(r, 350)); }
+      ensurePlayCtx();
+      if (!S.stream) await startMic();
+      send({type:"start"});
+      send({type:"set_echo_guard", value: S.echoGuard});
+      send({type:"set_direction", direction: $("selDir").value});
+      send({type:"set_barge_in", value: $("chkBarge").checked});
+      S.started = true;
+      $("btnStart").disabled = true;
+      $("btnStop").disabled = false;
+      setHint("正在听…");
+      log("开始采集");
+    } catch (e) {
+      log("启动失败：" + e.message);
+      $("warnbox").textContent = "麦克风启动失败：" + e.message;
+      $("warnbox").classList.add("show");
+    }
+  }
+
+  function stopAll(sendStop=true) {
+    clearSim();
+    S.started = false;
+    if (sendStop && online()) send({type:"stop"});
+    stopMic();
+    clearAudio();
+    $("btnStart").disabled = false;
+    $("btnStop").disabled = true;
+    setHint("已停止");
+    log("停止采集");
+  }
+
+  $("btnStart").onclick = startAll;
+  $("btnStop").onclick = () => stopAll(true);
+  $("btnSim").onclick = startSim;
+  $("btnSimStop").onclick = () => stopSim(true);
+  $("selDir").onchange = () => send({type:"set_direction", direction:$("selDir").value});
+  $("chkPlay").onchange = () => { S.play = $("chkPlay").checked; if (!S.play) clearAudio(); };
+  $("chkEcho").onchange = () => {
+    S.echoGuard = $("chkEcho").checked;
+    if (!S.echoGuard) S.echoMuted = false;
+    send({type:"set_echo_guard", value: S.echoGuard});
+    log(S.echoGuard ? "防回声已开启：播放译音时麦克风静音" : "防回声已关闭（请使用耳机）");
+  };
+  $("chkBarge").onchange = () => send({type:"set_barge_in", value: $("chkBarge").checked});
+  $("chkPtt").onchange = () => {
+    S.pttMode = $("chkPtt").checked;
+    $("btnPtt").style.display = S.pttMode ? "" : "none";
+    if (!S.pttMode) S.pttDown = false;
+    $("btnPtt").classList.remove("active");
+  };
+  $("btnPtt").style.display = "none";
+  const pttDown = (e) => { e.preventDefault(); S.pttDown = true; $("btnPtt").classList.add("active"); send({type:"cancel_tts"}); };
+  const pttUp = (e) => { e.preventDefault(); S.pttDown = false; $("btnPtt").classList.remove("active"); };
+  $("btnPtt").addEventListener("pointerdown", pttDown);
+  $("btnPtt").addEventListener("pointerup", pttUp);
+  $("btnPtt").addEventListener("pointerleave", pttUp);
+
+  // latency ticker: show segment -> first audio once all stages are known
+  setInterval(() => {
+    // no-op placeholder: metrics are updated by events
+  }, 500);
+
+  if (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(location.hostname)) {
+    const b = $("warnbox");
+    b.innerHTML = '当前是 HTTP，浏览器会禁用麦克风。请打开 <a style="color:#ffd28a" href="https://'
+      + location.hostname + ':8444/">HTTPS 入口</a>（接受自签名证书），'
+      + '或使用 Chrome 的 insecure-origin 启动参数。';
+    b.classList.add("show");
+  }
+  loadSamples();
+  connect();
+  log("页面就绪");
+})();
+</script>
+</body>
+</html>
