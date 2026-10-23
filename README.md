@@ -75,7 +75,22 @@ ssh -L 8096:localhost:8096 root@<board-ip>
 # 打开 http://localhost:8096/
 ```
 
-首轮启动会加载离线 ASR、Qwen 和 ZipVoice；模型缓存后会明显变快。
+首轮启动会加载离线 ASR、Opus-MT/Qwen 和 ZipVoice；模型缓存后会明显变快。
+
+`config/tls/` 是板端自签名证书，不提交到仓库。没有证书时只开 HTTP；需要麦克风时生成：
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes   -keyout config/tls/server.key -out config/tls/server.crt -days 3650   -subj "/CN=10.126.29.50"   -addext "subjectAltName=IP:10.126.29.50,IP:10.126.29.171,DNS:localhost"
+```
+
+## Opus-MT 模型
+
+```bash
+hf download HY-2012/Opus-MT.AXERA --local-dir models/opus_mt
+cd third_party/opus_mt/src/cpp
+TOOLCHAIN_ROOT=/path/to/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu BSP_MSP_DIR=/path/to/ax650n_bsp_sdk/msp/out bash build_ax650.sh
+cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
+```
 
 ## 关键参数
 
