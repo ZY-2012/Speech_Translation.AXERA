@@ -19,6 +19,7 @@ import traceback
 import numpy as np
 
 from .asr_offline import OfflineAsr
+from .asr_stream import StreamAsr
 from .clauses import ClauseSplitter, meaningful
 from .llm_axllm import AxLlmTranslator
 from .opus_mt import OpusMtTranslator
@@ -98,6 +99,9 @@ class Components:
         self.cfg = cfg
         self.mock = mock
         self.asr = None if mock else OfflineAsr(cfg)
+        self.asr_stream = None
+        if not mock and cfg["asr"].get("stream_enabled", False):
+            self.asr_stream = StreamAsr(cfg)
         self.tts = None if mock else ZipVoiceTts(cfg)
         self.llm_qwen = None
         self.llm_opus = None
@@ -138,6 +142,13 @@ class Components:
                 else:
                     self.llm_opus = None
         self.set_mt_backend(self.mt_backend)
+        if self.asr_stream is not None:
+            try:
+                self.asr_stream.start(wait=True)
+                print("[asr] streaming model ready", flush=True)
+            except Exception:
+                traceback.print_exc()
+                self.asr_stream = None
         if self.asr is not None:
             try:
                 self.asr.load()
@@ -157,7 +168,7 @@ class Components:
 
     def close(self):
         seen = set()
-        for obj in (self.asr, self.llm_qwen, self.llm_opus, self.tts):
+        for obj in (self.asr_stream, self.asr, self.llm_qwen, self.llm_opus, self.tts):
             if obj is None or id(obj) in seen:
                 continue
             seen.add(id(obj))
@@ -238,6 +249,8 @@ class Session:
             else:
                 yield from self.c.tts.stream(text, cancelled=cancelled)
 
+        if self.c.asr_stream is not None:
+            self.c.asr_stream.on_partial = self._on_asr_partial
         self._tts = TtsService(synth_fn=synth, send_audio=self.send_audio,
                                emit=self._tts_emit)
         self._asr_thread = threading.Thread(target=self._asr_loop, daemon=True,
@@ -284,8 +297,15 @@ class Session:
         if pcm.size:
             if self.echo_guard and time.monotonic() < self._tts_mute_until:
                 pcm = np.zeros_like(pcm)
+            if self.c.asr_stream is not None:
+                self.c.asr_stream.feed(pcm.tobytes())
             self._fed_samples += pcm.size
             self.segmenter.push(pcm)
+
+    def _on_asr_partial(self, text: str):
+        if not self.started:
+            return
+        self._emit("asr_partial", text=text or "")
 
     def _on_speech_start(self, index: int, start_sample: int, pre_roll: np.ndarray):
         self._active_uid = index
@@ -333,12 +353,26 @@ class Session:
             pending = None
             pcm = b"".join(p["pcm"])
             t_asr = time.monotonic()
+            stream_text = ""
+            offline_text = ""
             try:
                 if self.mock:
                     text = self._mock_texts[self._mock_idx % len(self._mock_texts)]
                     self._mock_idx += 1
                 else:
-                    text = self.c.asr.run(pcm) if self.c.asr is not None else ""
+                    if self.c.asr_stream is not None:
+                        stream_text = self.c.asr_stream.flush()
+                    if self.c.asr is not None:
+                        offline_text = self.c.asr.run(pcm)
+                    # Streaming SenseVoice keeps cross-fragment context; the
+                    # offline segment is used when it is complete enough to
+                    # supply punctuation/better homophones.
+                    import re as _re
+                    sk = lambda x: _re.sub(r"[\s\W_]", "", x or "")
+                    if offline_text and stream_text:
+                        text = offline_text if len(sk(offline_text)) >= 0.85 * len(sk(stream_text)) else stream_text
+                    else:
+                        text = offline_text or stream_text
             except Exception:
                 traceback.print_exc()
                 self._emit("error", message="ASR failed")

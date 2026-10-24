@@ -20,6 +20,7 @@ mkdir -p .work/logs
 pkill -9 -x qwen3-worker 2>/dev/null || true
 pkill -9 -x stream-asr-worker 2>/dev/null || true
 pkill -9 -x zipvoice_worker 2>/dev/null || true
+pkill -9 -f "third_party/asr/bin/stream-asr-worker" 2>/dev/null || true
 
 # Stop the previous demo server.  Buildroot has no `ss`/`curl`; use the pid
 # file first, then a targeted process match for a stale instance.

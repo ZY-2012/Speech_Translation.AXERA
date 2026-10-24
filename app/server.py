@@ -40,7 +40,7 @@ def _status():
     c = STATE["components"]
     return {
         "mock": STATE["mock"],
-        "asr_stream": False,
+        "asr_stream": bool(c.asr_stream and c.asr_stream.ready()) if c else False,
         "asr_offline": bool(c.asr and c.asr.ready()) if c else False,
         "llm": bool(c.llm and c.llm.ready()) if c else False,
         "mt_backend": getattr(c, "mt_backend", None) if c else None,

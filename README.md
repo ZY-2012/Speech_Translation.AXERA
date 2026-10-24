@@ -13,7 +13,8 @@ AX650N 板端实时语音翻译：**离线 SenseVoice → Opus-MT / Qwen3-0.6B �
 
 ```
 app/
-  asr_offline.py      # AX_ASR_RunPCM 非流式 SenseVoice
+  asr_stream.py       # 常驻 stream-asr-worker：连续流式 SenseVoice
+  asr_offline.py      # AX_ASR_RunPCM：轮次离线定稿 / 回退
   tts_zipvoice.py     # ZipVoice C++ 常驻 worker 客户端
   pipeline.py         # VAD -> ASR -> 小句 MT -> ZipVoice
   llm_axllm.py        # Qwen3-0.6B axllm OpenAI 流式接口
@@ -97,12 +98,13 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 `config/board.yaml`：
 
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
-- `audio.pre_roll_ms: 600` / `audio.post_roll_ms: 400`：给 VAD 边界留足上下文，减少句首/句尾吞字；
-- `audio.trailing_silence_ms: 500`：闭句等待，减少一句话被切成碎片；
+- `audio.pre_roll_ms: 2000` / `audio.post_roll_ms: 600`：给 VAD 边界留足上下文，减少句首/句尾吞字；
+- `audio.trailing_silence_ms: 1000`：闭句等待，减少一句话被切成碎片；
 - `audio.sentence_merge_ms: 300`：相邻 VAD 段的 PCM 在 0.3 s 内继续出现时按**音频级**合并；优先速度，长停顿仍按新句处理；
 - `audio.max_segment_ms: 6000`：最长小句，避免等整段长语音；
 - `vad.backend: ten`：TEN-VAD，替代能量 VAD；能量 VAD 在自然停顿处会把 70s 录音切成 31 个 1s 碎片，TEN-VAD 只切 19 个 4～6s 段；
-- `asr.backend: offline`：每段调用 `AX_ASR_RunPCM`，输出带标点文本；
+- `asr.stream_enabled: true`：连续 streaming SenseVoice + 离线定稿；`asr.model_dir` 仍用于定稿/回退；
+- `asr.stream_model_dir: models/asr_chain/asr`：流式 SenseVoice 模型；
 - `llm.backend: opus|qwen`：默认 Opus，Qwen 保留为质量模式；
 - `llm.opus.model_root`：`models/opus_mt/models`，包含 `zh-en` 和 `en-zh`；
 - `tts.engine: zipvoice`：ZipVoice distill；
@@ -117,7 +119,8 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - 完整 WSS：离线 ASR 定稿、Opus-MT 翻译、ZipVoice PCM 回传正常；
 - Opus-MT AX650 C++（50 板）：zh→en 约 57 ms，en→zh 约 108 ms（含首句），BLEU 32.78 / 28.72；
 - 0.6 s 以下语音段被丢弃，不再产生短段乱码；
-- 已改为音频级 utterance buffer：不再对每个 1 s 片段单独 ASR，也不再做 ASR 后的文本拼接；
+- 流式 partial 在 0.5 s 内开始出字；轮次结束用离线模型补标点/纠错；
+- 已改为 **连续流式 SenseVoice + 轮次离线定稿**：VAD 只决定 flush 时点，ASR 不再按 1 s 片段重建上下文；
 - 页面上的“识别”指标只显示真实 ASR 耗时；`合并等待` 是 utterance buffer 的端点等待，会单独显示在 meta 里。
 
 ## 限制
