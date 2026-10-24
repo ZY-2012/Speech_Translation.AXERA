@@ -6,8 +6,8 @@ server:
 audio:
   sample_rate: 16000
   vad_hop_ms: 16
-  pre_roll_ms: 240
-  post_roll_ms: 160
+  pre_roll_ms: 600
+  post_roll_ms: 400
   # Short noise bursts are discarded; real clauses are 0.6-3 s.
   min_speech_ms: 500
   trailing_silence_ms: 500

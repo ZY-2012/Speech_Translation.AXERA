@@ -97,6 +97,7 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 `config/board.yaml`：
 
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
+- `audio.pre_roll_ms: 600` / `audio.post_roll_ms: 400`：给 VAD 边界留足上下文，减少句首/句尾吞字；
 - `audio.trailing_silence_ms: 500`：闭句等待，减少一句话被切成碎片；
 - `audio.sentence_merge_ms: 300`：相邻 VAD 段的 PCM 在 0.3 s 内继续出现时按**音频级**合并；优先速度，长停顿仍按新句处理；
 - `audio.max_segment_ms: 6000`：最长小句，避免等整段长语音；
