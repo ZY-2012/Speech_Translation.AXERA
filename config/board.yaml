@@ -13,7 +13,7 @@ audio:
   trailing_silence_ms: 500
   # Fragments separated by a short breath are joined before MT, so one
   # spoken sentence stays one source/translation pair.
-  sentence_merge_ms: 1000
+  sentence_merge_ms: 300
   max_segment_ms: 4000
 
 vad:

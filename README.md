@@ -98,7 +98,7 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
 - `audio.trailing_silence_ms: 500`：闭句等待，减少一句话被切成碎片；
-- `audio.sentence_merge_ms: 1000`：相邻 VAD 段的 PCM 在 1 s 内继续出现时按**音频级**合并，端点后只跑一次 ASR；
+- `audio.sentence_merge_ms: 300`：相邻 VAD 段的 PCM 在 0.3 s 内继续出现时按**音频级**合并；优先速度，长停顿仍按新句处理；
 - `audio.max_segment_ms: 4000`：最长小句，避免等整段长语音；
 - `asr.backend: offline`：每段调用 `AX_ASR_RunPCM`，输出带标点文本；
 - `llm.backend: opus|qwen`：默认 Opus，Qwen 保留为质量模式；
