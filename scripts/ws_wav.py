@@ -32,6 +32,7 @@ def main():
     print("connected", resp.split(b"\r\n")[0].decode())
     s.settimeout(0.005)
     send_frame(s, 0x1, json.dumps({"type": "start"}).encode())
+    send_frame(s, 0x1, json.dumps({"type": "set_echo_guard", "value": False}).encode())
 
     with wave.open(WAV, "rb") as wf:
         rate = wf.getframerate()

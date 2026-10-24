@@ -571,6 +571,9 @@
       return;
     }
     send({type: "start"});
+    // WAV simulation is not a microphone; the server-side echo gate would
+    // zero parts of the simulated stream while TTS is playing.
+    send({type: "set_echo_guard", value: false});
     send({type: "set_barge_in", value: $("chkBarge").checked});
     S.started = true;
     $("btnStart").disabled = true;

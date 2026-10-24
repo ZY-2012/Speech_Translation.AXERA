@@ -187,7 +187,7 @@ class Session:
         self._ctx: list[tuple[str, str]] = []
         self._tts_first_at = None
         self._tts_mute_until = 0.0
-        self.echo_guard = True
+        self.echo_guard = False
         self._active_uid = 0
         self._fed_samples = 0
         self._mock_idx = 0
