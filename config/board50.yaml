@@ -9,7 +9,7 @@ audio:
   pre_roll_ms: 2000
   post_roll_ms: 600
   # Short noise bursts are discarded; real clauses are 0.6-3 s.
-  min_speech_ms: 615
+  min_speech_ms: 400
   trailing_silence_ms: 1000
   # Fragments separated by a short breath are joined before MT, so one
   # spoken sentence stays one source/translation pair.

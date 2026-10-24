@@ -370,7 +370,7 @@ class Session:
                     import re as _re
                     sk = lambda x: _re.sub(r"[\s\W_]", "", x or "")
                     if offline_text and stream_text:
-                        text = offline_text if len(sk(offline_text)) >= 0.85 * len(sk(stream_text)) else stream_text
+                        text = offline_text if len(sk(offline_text)) >= len(sk(stream_text)) else stream_text
                     else:
                         text = offline_text or stream_text
             except Exception:
