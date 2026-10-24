@@ -14,10 +14,10 @@ audio:
   # Fragments separated by a short breath are joined before MT, so one
   # spoken sentence stays one source/translation pair.
   sentence_merge_ms: 300
-  max_segment_ms: 4000
+  max_segment_ms: 6000
 
 vad:
-  backend: energy
+  backend: ten
   energy_threshold: 0.008
   library: third_party/ten_vad/libten_vad.so
   model_dir: models/asr_chain/vad/ten-vad

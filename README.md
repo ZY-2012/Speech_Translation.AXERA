@@ -99,7 +99,8 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
 - `audio.trailing_silence_ms: 500`：闭句等待，减少一句话被切成碎片；
 - `audio.sentence_merge_ms: 300`：相邻 VAD 段的 PCM 在 0.3 s 内继续出现时按**音频级**合并；优先速度，长停顿仍按新句处理；
-- `audio.max_segment_ms: 4000`：最长小句，避免等整段长语音；
+- `audio.max_segment_ms: 6000`：最长小句，避免等整段长语音；
+- `vad.backend: ten`：TEN-VAD，替代能量 VAD；能量 VAD 在自然停顿处会把 70s 录音切成 31 个 1s 碎片，TEN-VAD 只切 19 个 4～6s 段；
 - `asr.backend: offline`：每段调用 `AX_ASR_RunPCM`，输出带标点文本；
 - `llm.backend: opus|qwen`：默认 Opus，Qwen 保留为质量模式；
 - `llm.opus.model_root`：`models/opus_mt/models`，包含 `zh-en` 和 `en-zh`；
@@ -110,6 +111,7 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 ## 已验证
 
 - 离线 SenseVoice：6.6 s 音频约 0.21 s，RTF ≈ 0.03，输出带中文标点；
+- TEN-VAD + 离线 SenseVoice：`vad_example` 前 10s 从 31 个 1s 碎片变为 4.6s/3.3s 两个完整段，识别从“试错的过程很简”恢复为“试错的过程很简单而且特别是今天报名唱缺卡的同学，你们可以”；
 - ZipVoice distill C++：短句约 RTF 0.7（首句有固定 decoder 开销），模型常驻后不再重载；
 - 完整 WSS：离线 ASR 定稿、Opus-MT 翻译、ZipVoice PCM 回传正常；
 - Opus-MT AX650 C++（50 板）：zh→en 约 57 ms，en→zh 约 108 ms（含首句），BLEU 32.78 / 28.72；
@@ -120,6 +122,7 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 ## 限制
 
 - 非流式 ASR 在段末才出字，适合“小句级同时传译”，不是逐字字幕；
+- `models/asr_chain/vad/ten-vad/ten-vad.axmodel` 和 `third_party/ten_vad/libten_vad.so` 是 TEN-VAD 依赖；
 - ZipVoice 是整小句合成后输出 PCM，首帧约 1–1.5 s；不是逐音素流式；
 - 当前默认英文克隆参考音，适合中文→英文；反向翻译可替换 `prompt_wav/prompt_text`；
 - Opus-MT 是固定语言对模型：`zh-en` 和 `en-zh` 各一个，不支持第三种语言；
