@@ -315,7 +315,14 @@ class Session:
 
     # ------------------------------------------------------------------ asr
     def _asr_loop(self):
-        merge_s = float(self.cfg["audio"].get("sentence_merge_ms", 600)) / 1000.0
+        """Audio-level utterance buffer.
+
+        Do not run ASR on every 0.5 s VAD fragment.  Keep the PCM of adjacent
+        fragments and run AX_ASR_RunPCM once, after the utterance endpoint.
+        This preserves acoustic context and avoids truncated fragments such as
+        "试错的过程很简" or "专门的活动".
+        """
+        merge_s = float(self.cfg["audio"].get("sentence_merge_ms", 800)) / 1000.0
         pending: dict | None = None
 
         def flush_pending():
@@ -324,14 +331,30 @@ class Session:
                 return
             p = pending
             pending = None
-            latency = (time.monotonic() - p["first_end"]) * 1000
-            asr_ms = p.get("asr_ms", 0.0)
-            self._emit("asr_final", uid=p["uid"], text=p["text"],
+            pcm = b"".join(p["pcm"])
+            t_asr = time.monotonic()
+            try:
+                if self.mock:
+                    text = self._mock_texts[self._mock_idx % len(self._mock_texts)]
+                    self._mock_idx += 1
+                else:
+                    text = self.c.asr.run(pcm) if self.c.asr is not None else ""
+            except Exception:
+                traceback.print_exc()
+                self._emit("error", message="ASR failed")
+                return
+            asr_ms = (time.monotonic() - t_asr) * 1000
+            text = (text or "").strip()
+            if not text:
+                self._emit("asr_empty", uid=p["uid"])
+                return
+            total_ms = (time.monotonic() - p["first_end"]) * 1000
+            self._emit("asr_final", uid=p["uid"], text=text,
                        audio_s=round(p["audio_s"], 2),
-                       latency_ms=round(latency, 1),
+                       latency_ms=round(total_ms, 1),
                        asr_ms=round(asr_ms, 1),
-                       merge_ms=round(max(0.0, latency - asr_ms), 1))
-            self._mt_q.put({"uid": p["uid"], "text": p["text"],
+                       merge_ms=round(max(0.0, total_ms - asr_ms), 1))
+            self._mt_q.put({"uid": p["uid"], "text": text,
                             "audio_s": p["audio_s"]})
 
         while True:
@@ -344,31 +367,16 @@ class Session:
             if job is None:
                 flush_pending()
                 break
-            try:
-                if self.mock:
-                    text = self._mock_texts[self._mock_idx % len(self._mock_texts)]
-                    self._mock_idx += 1
-                else:
-                    text = self.c.asr.run(job["pcm"]) if self.c.asr is not None else ""
-                text = (text or "").strip()
-                if not text:
-                    self._emit("asr_empty", uid=job["uid"])
-                    continue
-                now = time.monotonic()
-                if pending is not None and now - pending["last_at"] <= merge_s:
-                    pending["text"] = _merge_sentence_text(pending["text"], text)
-                    pending["audio_s"] += job["audio_s"]
-                    pending["asr_ms"] += (now - job["end_at"]) * 1000
-                    pending["last_at"] = now
-                else:
-                    flush_pending()
-                    pending = {"uid": job["uid"], "text": text,
-                               "audio_s": job["audio_s"],
-                               "first_end": job["end_at"], "last_at": now,
-                               "asr_ms": (now - job["end_at"]) * 1000}
-            except Exception:
-                traceback.print_exc()
-                self._emit("error", message="ASR failed")
+            now = time.monotonic()
+            if pending is not None and now - pending["last_at"] <= merge_s:
+                pending["pcm"].append(job["pcm"])
+                pending["audio_s"] += job["audio_s"]
+                pending["last_at"] = now
+            else:
+                flush_pending()
+                pending = {"uid": job["uid"], "pcm": [job["pcm"]],
+                           "audio_s": job["audio_s"],
+                           "first_end": job["end_at"], "last_at": now}
         self._emit("asr_worker_stopped")
 
     # ------------------------------------------------------------------ mt/tts

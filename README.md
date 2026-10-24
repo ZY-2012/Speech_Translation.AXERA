@@ -98,7 +98,7 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
 - `audio.trailing_silence_ms: 500`：闭句等待，减少一句话被切成碎片；
-- `audio.sentence_merge_ms: 800`：相邻 ASR 段在 0.8 s 内继续出现时合并成一句，再送 MT/TTS；
+- `audio.sentence_merge_ms: 1000`：相邻 VAD 段的 PCM 在 1 s 内继续出现时按**音频级**合并，端点后只跑一次 ASR；
 - `audio.max_segment_ms: 4000`：最长小句，避免等整段长语音；
 - `asr.backend: offline`：每段调用 `AX_ASR_RunPCM`，输出带标点文本；
 - `llm.backend: opus|qwen`：默认 Opus，Qwen 保留为质量模式；
@@ -114,7 +114,8 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - 完整 WSS：离线 ASR 定稿、Opus-MT 翻译、ZipVoice PCM 回传正常；
 - Opus-MT AX650 C++（50 板）：zh→en 约 57 ms，en→zh 约 108 ms（含首句），BLEU 32.78 / 28.72；
 - 0.6 s 以下语音段被丢弃，不再产生短段乱码；
-- 页面上的“识别”指标现在只显示真实 ASR 耗时；800ms 左右是 `sentence_merge_ms` 的合并等待，会单独显示在 meta 里。
+- 已改为音频级 utterance buffer：不再对每个 1 s 片段单独 ASR，也不再做 ASR 后的文本拼接；
+- 页面上的“识别”指标只显示真实 ASR 耗时；`合并等待` 是 utterance buffer 的端点等待，会单独显示在 meta 里。
 
 ## 限制
 
