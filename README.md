@@ -1,6 +1,6 @@
 # Speech-Translation-ZipVoice
 
-AX650N 板端实时语音翻译：**离线 SenseVoice → Opus-MT / Qwen3-0.6B → ZipVoice Distill（语音克隆）**。
+AX650N 板端实时语音翻译：**离线 SenseVoice（或流式 Zipformer）→ FireRedPunc → Opus-MT / Qwen3-0.6B → ZipVoice Distill（语音克隆）**。
 
 这个工程与旧的 `Streaming-Speech-Translation` 完全独立：
 
@@ -13,8 +13,10 @@ AX650N 板端实时语音翻译：**离线 SenseVoice → Opus-MT / Qwen3-0.6B �
 
 ```
 app/
-  asr_stream.py       # 常驻 stream-asr-worker：连续流式 SenseVoice
+  asr_stream.py       # 常驻 stream-asr-worker：连续流式 SenseVoice / Zipformer
   asr_offline.py      # AX_ASR_RunPCM：轮次离线定稿 / 回退
+  punc.py             # FireRedPunc AX650 常驻 worker 客户端（auto 模式）
+  punc_worker.py      # FireRedPunc worker（系统 Python 3.10）
   tts_zipvoice.py     # ZipVoice C++ 常驻 worker 客户端
   pipeline.py         # VAD -> ASR -> 小句 MT -> ZipVoice
   llm_axllm.py        # Qwen3-0.6B axllm OpenAI 流式接口
@@ -38,6 +40,7 @@ models/
     cpp/scripts/py_daemon.py
 third_party/
   asr/lib/libax_asr_api.so
+  zf/zf_asr_worker.py # Zipformer 流式 ASR worker（可选后端）
   llm/axllm
   opus_mt/src/        # C++ source and opus_mt_worker.cpp
   zipvoice/src/       # C++ source and zipvoice_worker.cpp
@@ -53,8 +56,10 @@ ASR/TTS 模型会同时占 NPU。
 
 ```bash
 cd /root/huyuan/183_workspace/Speech-Translation-ZipVoice
-# 50 板（Opus 默认，Qwen 可选）
+# 50 板（SenseVoice + Opus 默认）
 CONFIG=config/board50.yaml PORT=8097 TLS_PORT=8445 bash scripts/run_board.sh
+# 50 板 Zipformer 流式 + Punc A/B（Opus，Qwen 关闭）
+CONFIG=config/board50_zf.yaml PORT=8098 bash scripts/run_board.sh
 # 171 板（Qwen 默认，Opus 可选）
 bash scripts/run_board.sh
 ```
@@ -76,13 +81,58 @@ ssh -L 8096:localhost:8096 root@<board-ip>
 # 打开 http://localhost:8096/
 ```
 
-首轮启动会加载离线 ASR、Opus-MT/Qwen 和 ZipVoice；模型缓存后会明显变快。
+首轮启动会加载离线 ASR、Opus-MT/Qwen、ZipVoice 和 FireRedPunc；模型缓存后会明显变快。
+`config/board50_zf.yaml` 使用 Zipformer 流式 ASR + Punc，端口 8098，Qwen 关闭。
 
 `config/tls/` 是板端自签名证书，不提交到仓库。没有证书时只开 HTTP；需要麦克风时生成：
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes   -keyout config/tls/server.key -out config/tls/server.crt -days 3650   -subj "/CN=10.126.29.50"   -addext "subjectAltName=IP:10.126.29.50,IP:10.126.29.171,DNS:localhost"
 ```
+
+## FireRedPunc 标点模型
+
+Punc 工程在 `../FireRedPunc.AXERA`（与本工程同级），模型 `models/punc.axmodel`
+在 AX650 NPU1 上约 23 ms/128 token。`config/board50.yaml` 默认 `punc.mode: auto`：
+SenseVoice 文本已有 `。！？!?` 时直接跳过，不改变现有稳定链路；Zipformer
+文本无标点时自动补标点，再走 `split_source -> MT -> TTS`。
+
+```yaml
+punc:
+  enabled: true
+  mode: auto
+  python: /usr/bin/python3
+  worker: app/punc_worker.py
+  runtime_dir: ../FireRedPunc.AXERA/python
+  model_dir: ../FireRedPunc.AXERA/models
+```
+
+`app/punc_worker.py` 用系统 Python 3.10（有 transformers + axengine），主服务
+仍用 portable Python 3.11；worker 会清掉主进程的 `PYTHONPATH`，避免 3.11 的
+numpy 泄漏到 3.10。
+
+## Zipformer 可选 ASR 后端
+
+`config/board50_zf.yaml` 把 ASR 换成 ZF 流式模型：
+
+```yaml
+asr:
+  backend: zipformer
+  stream_worker: third_party/zf/zf_asr_worker.py
+  stream_model_dir: ../../ZF/streaming/release/models
+```
+
+`third_party/zf/zf_asr_worker.py` 用系统 Python 3.10 + `kaldi_native_fbank` +
+`axengine`，维护 35 个 encoder 状态，按 32 帧 chunk 增量解码，VAD 只决定 flush。
+模型在 `../ZF/streaming/release/models`（AX650 U16）。
+
+A/B 观察（50 板，`samples/zh_6s.wav` / `samples/en_16k.wav`）：
+
+- ZF 增量 ASR 在 VAD 结束后的 final 延迟约 50–62 ms（含 Punc 24–35 ms），
+  首帧 TTS 约 1.4 s；
+- SenseVoice 当前离线定稿仍是中文/英文质量更稳的那一路；
+- ZF 在这两条样本上出现 `莫名昌卡` / `fifty pieces of cold` 一类识别错误，
+  因此默认仍是 SenseVoice，ZF 需要更多域内语料再决定是否切换。
 
 ## Opus-MT 模型
 
@@ -105,6 +155,8 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - `vad.backend: ten`：TEN-VAD，替代能量 VAD；能量 VAD 在自然停顿处会把 70s 录音切成 31 个 1s 碎片，TEN-VAD 只切 19 个 4～6s 段；
 - `asr.stream_enabled: true`：连续 streaming SenseVoice + 离线定稿；`asr.model_dir` 仍用于定稿/回退；
 - `asr.stream_model_dir: models/asr_chain/asr`：流式 SenseVoice 模型；
+- `asr.backend: sensevoice|zipformer`：`zipformer` 时改用 `config/board50_zf.yaml`；
+- `punc.mode: auto|always|off`：`auto` 只对无句末标点的文本运行 Punc；
 - `llm.backend: opus|qwen`：默认 Opus，Qwen 保留为质量模式；
 - `llm.opus.model_root`：`models/opus_mt/models`，包含 `zh-en` 和 `en-zh`；
 - `tts.engine: zipvoice`：ZipVoice distill；
@@ -117,6 +169,10 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - TEN-VAD + 离线 SenseVoice：`vad_example` 前 10s 从 31 个 1s 碎片变为 4.6s/3.3s 两个完整段，识别从“试错的过程很简”恢复为“试错的过程很简单而且特别是今天报名唱缺卡的同学，你们可以”；
 - ZipVoice distill C++：短句约 RTF 0.7（首句有固定 decoder 开销），模型常驻后不再重载；
 - 完整 WSS：离线 ASR 定稿、Opus-MT 翻译、ZipVoice PCM 回传正常；
+- FireRedPunc AX650：板端 token/text 与 fp32 100% 一致，128 token 约 23 ms；
+  SenseVoice 文本自动跳过，Zipformer 文本自动补标点；
+- Zipformer 流式 + Punc：`samples/zh_6s.wav` / `en_16k.wav` / ZF `0.wav`
+  全链路跑通，VAD 结束后 final 约 50–62 ms；
 - Opus-MT AX650 C++（50 板）：zh→en 约 57 ms，en→zh 约 108 ms（含首句），BLEU 32.78 / 28.72；
 - 0.6 s 以下语音段被丢弃，不再产生短段乱码；
 - 流式 partial 在 0.5 s 内开始出字；轮次结束用离线模型补标点/纠错；
@@ -130,7 +186,13 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - ZipVoice 是整小句合成后输出 PCM，首帧约 1–1.5 s；不是逐音素流式；
 - 当前默认英文克隆参考音，适合中文→英文；反向翻译可替换 `prompt_wav/prompt_text`；
 - Opus-MT 是固定语言对模型：`zh-en` 和 `en-zh` 各一个，不支持第三种语言；
-- Qwen 和 Opus 同时常驻会占更多内存；50 板启动约需 2～3 分钟；
+- Qwen 和 Opus 同时常驻会占更多内存；50 板启动约需 2～3 分钟；NFS 冷缓存时
+  首次加载可能到 8～12 分钟，`run_board.sh` 已把等待上限放宽到 900 s；
+- Punc 依赖同级的 `../FireRedPunc.AXERA`；目录不存在时 Punc worker 启动失败，
+  主链路会自动跳过 Punc，不影响 SenseVoice 翻译；
+- FireRedPunc 会把英文转成小写（上游 `RuleBaedTxtFix` 行为）；en→zh 对大小写
+  敏感时可再按原始字符恢复；
+- Zipformer 当前只作为 `config/board50_zf.yaml` 的可选后端，默认仍是 SenseVoice；
 - 译文音频时长可能长于源语音，连续长时说话仍需要变速或更简洁的译文来控制积压；
 - **防回声默认开启（页面 + 服务端双重）**：译音播放期间麦克风和 ASR 输入都会被静音，避免扬声器声音被再次识别成 `The.` / `Ran.` / `Yeah.`。戴耳机时可以取消该勾选，恢复边说边译；
 - ZipVoice 的 `num_step=3` / `speed=1.1` 更快配置实测会丢词（`The process of trial.` 只读出 `The process.`），所以默认保留 **4 步 + speed 1.0**；首帧约 1.4 s。

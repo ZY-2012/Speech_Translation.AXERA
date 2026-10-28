@@ -46,9 +46,12 @@ class StreamAsr:
         self._log = open(log_dir / "stream_asr.log", "ab", buffering=0)
         r, w = os.pipe()
         env = dict(os.environ)
+        # Python workers (the optional Zipformer backend) run under the
+        # system Python 3.10; do not leak the main 3.11 PYTHONPATH/pylibs.
+        env.pop("PYTHONPATH", None)
+        env.pop("PYTHONHOME", None)
         env["LD_LIBRARY_PATH"] = (str(root / "third_party/asr/lib") +
-                                  ":/soc/lib:/opt/lib:" +
-                                  env.get("LD_LIBRARY_PATH", ""))
+                                  ":/soc/lib:/opt/lib")
         env.setdefault("AX_SENSEVOICE_SHARE_DIR", str(root / self.conf["stream_model_dir"]))
         args = [
             str(root / self.conf["stream_worker"]),

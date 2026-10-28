@@ -21,6 +21,8 @@ pkill -9 -x qwen3-worker 2>/dev/null || true
 pkill -9 -x stream-asr-worker 2>/dev/null || true
 pkill -9 -x zipvoice_worker 2>/dev/null || true
 pkill -9 -f "third_party/asr/bin/stream-asr-worker" 2>/dev/null || true
+pkill -9 -f "zf_asr_worker.py" 2>/dev/null || true
+pkill -9 -f "punc_worker.py" 2>/dev/null || true
 
 # Stop the previous demo server.  Buildroot has no `ss`/`curl`; use the pid
 # file first, then a targeted process match for a stale instance.
@@ -42,7 +44,7 @@ nohup "${PYTHON}" app/server.py --config "${CONFIG}" --port "${PORT}" ${TLS_OPTS
   > .work/logs/server.log 2>&1 &
 echo $! > .work/server.pid
 
-for _ in $(seq 1 360); do
+for _ in $(seq 1 900); do
   if wget -q -O /dev/null "http://127.0.0.1:${PORT}/health" 2>/dev/null; then
     echo "[run] ready: http://<board-ip>:${PORT}/"
     if [[ -n "${TLS_OPTS}" ]]; then

@@ -1,0 +1,101 @@
+server:
+  host: 0.0.0.0
+  port: 8098
+  max_sessions: 1
+
+audio:
+  sample_rate: 16000
+  vad_hop_ms: 16
+  pre_roll_ms: 2000
+  post_roll_ms: 600
+  # Short noise bursts are discarded; real clauses are 0.6-3 s.
+  min_speech_ms: 400
+  trailing_silence_ms: 1000
+  # Fragments separated by a short breath are joined before MT, so one
+  # spoken sentence stays one source/translation pair.
+  sentence_merge_ms: 0
+  max_segment_ms: 10000
+
+vad:
+  backend: ten
+  energy_threshold: 0.008
+  library: third_party/ten_vad/libten_vad.so
+  model_dir: models/asr_chain/vad/ten-vad
+  threshold: 0.3
+
+asr:
+  backend: zipformer
+  enabled: true
+  library: third_party/asr/lib/libax_asr_api.so
+  model_dir: models/asr_official/sensevoice_ax650
+  language: zh
+  stream_enabled: true
+  stream_worker: third_party/zf/zf_asr_worker.py
+  stream_model_dir: ../../ZF/streaming/release/models
+  stream_load_timeout_s: 180
+
+llm:
+  enabled: true
+  backend: opus
+  qwen_enabled: false
+  opus_enabled: true
+  binary: third_party/llm/axllm
+  model_dir: models/qwen3-0.6b
+  model_name: AXERA-TECH/Qwen3-0.6B-GPTQ-Int4
+  port: 8000
+  auto_start: true
+  load_timeout_s: 600
+  enable_thinking: false
+  system_prompt: >-
+    You are a professional simultaneous interpreter. Translate the user's
+    clause between Chinese and English. Output ONLY the translation of the new
+    clause, with no explanations, quotes, labels, or repetition of context.
+    Preserve names, numbers and terminology. Use natural, concise spoken
+    language.
+  max_tokens: 80
+  temperature: 0.0
+  top_p: 1.0
+  timeout_s: 30
+  direction: auto
+  use_context: false
+  opus:
+    enabled: true
+    binary: models/opus_mt/bin/opus_mt_worker
+    model_root: models/opus_mt/models
+    max_new_tokens: 64
+
+tts:
+  enabled: true
+  engine: zipvoice
+  # C++ resident worker; models are loaded once and the prompt voice is cached.
+  binary: models/zipvoice/bin/zipvoice_worker
+  model_dir: models/zipvoice/models/zipvoice_distill_ax650
+  prompt_wav: models/zipvoice/assets/moss_prompts/en_4_4p5s.wav
+  prompt_text: "This is almost twice the current industry production level per train."
+  vocoder_model: models/zipvoice/models/vocoder/vocos_full.axmodel
+  repo_dir: models/zipvoice
+  tmp_dir: .work/zipvoice-tmp
+  num_step: 4
+  speed: 1.0
+  guidance_scale: 0.0
+  warmup_text: "Hello, this is a test."
+  clause_min_chars: 6
+  clause_max_chars: 40
+  gap_ms: 0
+
+punc:
+  enabled: true
+  mode: auto
+  python: /usr/bin/python3
+  worker: app/punc_worker.py
+  runtime_dir: ../FireRedPunc.AXERA/python
+  model_dir: ../FireRedPunc.AXERA/models
+  start_timeout_s: 120
+  request_timeout_s: 5
+
+runtime:
+  work_dir: .work
+  log_dir: .work/logs
+  npu_lock_file: .work/npu2.lock
+  barge_in: false
+  preload: true

@@ -40,8 +40,11 @@ def _status():
     c = STATE["components"]
     return {
         "mock": STATE["mock"],
+        "asr_backend": c.cfg["asr"].get("backend") if c else None,
         "asr_stream": bool(c.asr_stream and c.asr_stream.ready()) if c else False,
         "asr_offline": bool(c.asr and c.asr.ready()) if c else False,
+        "punc": bool(c.punc and c.punc.ready()) if c else False,
+        "punc_mode": c.cfg.get("punc", {}).get("mode") if c else None,
         "llm": bool(c.llm and c.llm.ready()) if c else False,
         "mt_backend": getattr(c, "mt_backend", None) if c else None,
         "qwen": bool(c.llm_qwen and c.llm_qwen.ready()) if c else False,

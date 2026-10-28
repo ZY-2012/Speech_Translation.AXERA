@@ -83,6 +83,16 @@ tts:
   clause_max_chars: 40
   gap_ms: 0
 
+punc:
+  enabled: true
+  mode: auto
+  python: /usr/bin/python3
+  worker: app/punc_worker.py
+  runtime_dir: ../FireRedPunc.AXERA/python
+  model_dir: ../FireRedPunc.AXERA/models
+  start_timeout_s: 120
+  request_timeout_s: 5
+
 runtime:
   work_dir: .work
   log_dir: .work/logs
