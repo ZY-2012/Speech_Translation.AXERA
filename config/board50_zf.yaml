@@ -10,7 +10,7 @@ audio:
   post_roll_ms: 600
   # Short noise bursts are discarded; real clauses are 0.6-3 s.
   min_speech_ms: 400
-  trailing_silence_ms: 1000
+  trailing_silence_ms: 700
   # Fragments separated by a short breath are joined before MT, so one
   # spoken sentence stays one source/translation pair.
   sentence_merge_ms: 0
@@ -75,7 +75,7 @@ tts:
   vocoder_model: models/zipvoice/models/vocoder/vocos_full.axmodel
   repo_dir: models/zipvoice
   tmp_dir: .work/zipvoice-tmp
-  num_step: 4
+  num_step: 3
   speed: 1.0
   guidance_scale: 0.0
   warmup_text: "Hello, this is a test."

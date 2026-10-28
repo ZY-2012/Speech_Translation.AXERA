@@ -23,6 +23,20 @@ tokenizer = LocalEmiliaTokenizer(token_file=TOKEN_FILE)
 
 print("READY", flush=True)
 
+# The C++ worker rewrites the prompt file on every request, but the content is
+# fixed.  Cache the prompt token ids so only the new target text is tokenized.
+_prompt_cache = {"text": None, "ids": None}
+
+
+def get_prompt_ids(prompt_file):
+    global _prompt_cache
+    pt = normalize_punctuation(open(prompt_file).read().strip())
+    if pt != _prompt_cache["text"]:
+        _prompt_cache["text"] = pt
+        _prompt_cache["ids"] = tokenizer.texts_to_token_ids([pt])[0]
+    return _prompt_cache["ids"]
+
+
 for line in sys.stdin:
     line = line.rstrip("\n")
     if not line:
@@ -32,17 +46,15 @@ for line in sys.stdin:
 
     if cmd == "count":
         prompt_file, text_file = parts[1], parts[2]
-        pt = normalize_punctuation(open(prompt_file).read().strip())
+        pids = get_prompt_ids(prompt_file)
         tt = normalize_punctuation(open(text_file).read().strip())
-        pids = tokenizer.texts_to_token_ids([pt])[0]
         tids = tokenizer.texts_to_token_ids([tt])[0]
         print(f"COUNT {len(pids)} {len(tids)}", flush=True)
 
     elif cmd == "tokenize":
         prompt_file, text_file, max_tokens, output_bin = parts[1], parts[2], int(parts[3]), parts[4]
-        pt = normalize_punctuation(open(prompt_file).read().strip())
+        pids = get_prompt_ids(prompt_file)
         tt = normalize_punctuation(open(text_file).read().strip())
-        pids = tokenizer.texts_to_token_ids([pt])[0]
         tids = tokenizer.texts_to_token_ids([tt])[0]
         cat = pids + tids + [tokenizer.pad_id]
         if len(cat) > max_tokens:

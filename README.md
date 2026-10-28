@@ -128,8 +128,12 @@ asr:
 
 A/B 观察（50 板，`samples/zh_6s.wav` / `samples/en_16k.wav`）：
 
-- ZF 增量 ASR 在 VAD 结束后的 final 延迟约 50–62 ms（含 Punc 24–35 ms），
-  首帧 TTS 约 1.4 s；
+- ZF 增量 ASR 在 VAD 结束后的 final 延迟约 50–78 ms（含 Punc 24–35 ms）；
+- 首帧 TTS：`num_step=4` 约 1.33–1.39 s，`num_step=3` 约 1.08–1.15 s；
+  `config/board50_zf.yaml` 采用 3 步 + `trailing_silence_ms: 700`，
+  “闭句→首帧音”从约 1.5–2.1 s 降到约 1.2–1.3 s；
+- ZipVoice Python 分词器已缓存固定 prompt 的 token ids，后续每句只分词新译文，
+  分词耗时从约 505 ms 降到约 260–270 ms；
 - SenseVoice 当前离线定稿仍是中文/英文质量更稳的那一路；
 - ZF 在这两条样本上出现 `莫名昌卡` / `fifty pieces of cold` 一类识别错误，
   因此默认仍是 SenseVoice，ZF 需要更多域内语料再决定是否切换。
@@ -150,6 +154,7 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
 - `audio.pre_roll_ms: 2000` / `audio.post_roll_ms: 600`：给 VAD 边界留足上下文，减少句首/句尾吞字；
 - `audio.trailing_silence_ms: 1000`：闭句等待，减少一句话被切成碎片；
+  `config/board50_zf.yaml` 为提速改为 **700**（`zh_30s.wav` 上切段结果与 1000 相同）；
 - `audio.sentence_merge_ms: 300`：相邻 VAD 段的 PCM 在 0.3 s 内继续出现时按**音频级**合并；优先速度，长停顿仍按新句处理；
 - `audio.max_segment_ms: 6000`：最长小句，避免等整段长语音；
 - `vad.backend: ten`：TEN-VAD，替代能量 VAD；能量 VAD 在自然停顿处会把 70s 录音切成 31 个 1s 碎片，TEN-VAD 只切 19 个 4～6s 段；
@@ -161,7 +166,11 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - `llm.opus.model_root`：`models/opus_mt/models`，包含 `zh-en` 和 `en-zh`；
 - `tts.engine: zipvoice`：ZipVoice distill；
 - `tts.prompt_wav/prompt_text`：默认英文克隆参考音；
-- `tts.clause_max_chars: 40`：目标小句长度，控制首帧等待。
+- `tts.clause_max_chars: 40`：目标小句长度，控制首帧等待；
+- `tts.num_step: 4`：默认质量档；`config/board50_zf.yaml` 用 **3** 提速，
+  5 条英文样本经 SenseVoice 回识与 4 步一致；若某域出现丢词，改回 4；
+- ZipVoice 模型包里的 `models/zipvoice/cpp/scripts/py_daemon.py` 需要与
+  `third_party/zipvoice/src/cpp/scripts/py_daemon.py` 同步，否则没有 prompt 缓存。
 
 ## 已验证
 
@@ -183,7 +192,8 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 
 - 非流式 ASR 在段末才出字，适合“小句级同时传译”，不是逐字字幕；
 - `models/asr_chain/vad/ten-vad/ten-vad.axmodel` 和 `third_party/ten_vad/libten_vad.so` 是 TEN-VAD 依赖；
-- ZipVoice 是整小句合成后输出 PCM，首帧约 1–1.5 s；不是逐音素流式；
+- ZipVoice 是整小句合成后输出 PCM；3 步/700 ms 配置下首帧约 1.1 s，
+  4 步约 1.3–1.4 s；不是逐音素流式；
 - 当前默认英文克隆参考音，适合中文→英文；反向翻译可替换 `prompt_wav/prompt_text`；
 - Opus-MT 是固定语言对模型：`zh-en` 和 `en-zh` 各一个，不支持第三种语言；
 - Qwen 和 Opus 同时常驻会占更多内存；50 板启动约需 2～3 分钟；NFS 冷缓存时
@@ -195,4 +205,6 @@ cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 - Zipformer 当前只作为 `config/board50_zf.yaml` 的可选后端，默认仍是 SenseVoice；
 - 译文音频时长可能长于源语音，连续长时说话仍需要变速或更简洁的译文来控制积压；
 - **防回声默认开启（页面 + 服务端双重）**：译音播放期间麦克风和 ASR 输入都会被静音，避免扬声器声音被再次识别成 `The.` / `Ran.` / `Yeah.`。戴耳机时可以取消该勾选，恢复边说边译；
-- ZipVoice 的 `num_step=3` / `speed=1.1` 更快配置实测会丢词（`The process of trial.` 只读出 `The process.`），所以默认保留 **4 步 + speed 1.0**；首帧约 1.4 s。
+- `num_step=3` + `speed=1.1` 的旧配置实测会丢词；当前 ZF 配置是
+  **3 步 + speed 1.0**，5 条英文样本回识完整。若换域后丢词，改回 4 步；
+  默认 `board50.yaml` 保持 4 步。
