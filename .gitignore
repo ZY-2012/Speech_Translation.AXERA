@@ -1,6 +1,8 @@
 .work/
 runtime/
 models/
+runtime
+models
 third_party/zipvoice/src/.git/
 third_party/zipvoice/src/cpp/build_ax650/
 third_party/zipvoice/src/cpp/install/

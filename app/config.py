@@ -28,6 +28,7 @@ _DEFAULTS = {
         "threshold": 0.3,
     },
     "asr": {
+        "backend": "sensevoice",
         "stream_enabled": True,
         "stream_worker": "third_party/stream_asr/bin/stream-asr-worker",
         "stream_model_dir": "models/asr_chain/asr",
@@ -67,6 +68,16 @@ _DEFAULTS = {
         "max_pending_mt": 8,
         "min_final_chars": 8,
         "pause_stream_during_tts": False,
+    },
+    "punc": {
+        "enabled": True,
+        "mode": "auto",
+        "python": "/usr/bin/python3",
+        "worker": "app/punc_worker.py",
+        "runtime_dir": "../FireRedPunc.AXERA/python",
+        "model_dir": "../FireRedPunc.AXERA/models",
+        "start_timeout_s": 120,
+        "request_timeout_s": 5,
     },
     "runtime": {
         "work_dir": ".work",
@@ -113,6 +124,7 @@ def load(path: str | os.PathLike | None = None) -> dict:
         ("asr", "offline_model_dir"),
         ("llm", "worker"), ("llm", "model_dir"),
         ("tts", "runtime"), ("tts", "model_dir"), ("tts", "reference"),
+        ("punc", "worker"), ("punc", "runtime_dir"), ("punc", "model_dir"),
     ):
         data[section][key] = _resolve(data[section][key])
 

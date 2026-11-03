@@ -25,6 +25,7 @@ from .clauses import ClauseSplitter, meaningful
 from .llm_axllm import AxLlmTranslator
 from .number_text import normalize_numbers
 from .opus_mt import OpusMtTranslator
+from .punc import PuncClient
 from .tts_service import TtsService
 from .tts_zipvoice import FRAME as TTS_FRAME
 from .tts_zipvoice import SR as TTS_SR
@@ -93,10 +94,12 @@ class Components:
     def __init__(self, cfg: dict, mock: bool = False):
         self.cfg = cfg
         self.mock = mock
-        self.asr = None if mock else OfflineAsr(cfg)
+        asr_backend = str(cfg["asr"].get("backend", "sensevoice")).lower()
+        self.asr = None if mock or asr_backend == "zipformer" else OfflineAsr(cfg)
         self.asr_stream = None
         if not mock and cfg["asr"].get("stream_enabled", False):
             self.asr_stream = StreamAsr(cfg)
+        self.punc = None if mock else PuncClient(cfg)
         self.tts = None if mock else ZipVoiceTts(cfg)
         self.tts_zh = None
         if not mock and cfg["tts"].get("zh_prompt_wav"):
@@ -276,11 +279,20 @@ class Components:
                     self.tts_zh = None
                 else:
                     self.tts = None
+        if self.punc is not None:
+            try:
+                if self.punc.start(wait=True):
+                    print("[punc] ready", flush=True)
+                else:
+                    self.punc = None
+            except Exception:
+                traceback.print_exc()
+                self.punc = None
 
     def close(self):
         seen = set()
         for obj in (self.asr_stream, self.asr, self.llm_qwen, self.llm_opus,
-                    self.tts, self.tts_zh, self.tts_custom):
+                    self.tts, self.tts_zh, self.tts_custom, self.punc):
             if obj is None or id(obj) in seen:
                 continue
             seen.add(id(obj))
@@ -522,10 +534,15 @@ class Session:
                 return
             asr_ms = (time.monotonic() - t_asr) * 1000
             text = (text or "").strip()
-            # Drop noise and VAD fragments.  A complete Chinese utterance
-            # normally gets terminal punctuation from the offline pass; a
-            # short unpunctuated result is usually a clipped fragment or a
-            # nearby speaker's partial sentence.
+            punc_ms = 0.0
+            if text and self.c.punc is not None:
+                t_punc = time.monotonic()
+                try:
+                    text = self.c.punc.apply(text)
+                except Exception:
+                    traceback.print_exc()
+                punc_ms = (time.monotonic() - t_punc) * 1000
+            # Drop noise and VAD fragments after optional punctuation.
             clean = re.sub(r"[\s\W_]", "", text or "")
             min_chars = max(1, int(self.cfg["asr"].get("min_text_chars", 2)))
             drop_short = max(0, int(self.cfg["asr"].get(
@@ -546,6 +563,7 @@ class Session:
             total_ms = (time.monotonic() - p["first_end"]) * 1000
             self._emit("asr_final", uid=p["uid"], text=text,
                        audio_s=round(p["audio_s"], 2),
+                       punc_ms=round(punc_ms, 1),
                        latency_ms=round(total_ms, 1),
                        asr_ms=round(asr_ms, 1),
                        merge_ms=round(max(0.0, total_ms - asr_ms), 1))
