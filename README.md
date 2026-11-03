@@ -1,10 +1,10 @@
 # Speech-Translation-ZipVoice
 
-AX650N 板端实时语音翻译：**离线 SenseVoice → Opus-MT / Qwen3-0.6B → ZipVoice Distill（语音克隆）**。
+AX650N 板端实时语音翻译：**连续流式 SenseVoice + 离线定稿 → Opus-MT / Qwen3-0.6B → ZipVoice Distill（语音克隆）**。
 
 这个工程与旧的 `Streaming-Speech-Translation` 完全独立：
 
-- ASR 改为**非流式小句识别**，避免 0.2 s 短段产生 `i뭐the` 这类乱码；
+- ASR 使用**连续流式 SenseVoice**，轮次结束再用离线模型定稿，避免 1 s 碎片丢上下文；
 - TTS 使用 **ZipVoice.AXERA distill C++ 常驻 worker**，不再使用 Pocket-TTS；
 - 原文/译文合并成一个对话流，一句原文一句译文；
 - 模型全部在主机/NFS，不下载到板端本地盘。
@@ -64,7 +64,20 @@ bash scripts/run_board.sh
 - 50 板：HTTP `8097` / HTTPS `8445`
 - 171 板：HTTP `8096` / HTTPS `8444`
 
-页面上的 `MT:` 下拉框可以运行时切换：
+页面上可以运行时切换 ASR / MT / TTS：
+
+- **ASR**：`流式 + 离线定稿` / `仅离线定稿`；
+- **MT**：`Opus-MT 快速` / `Qwen 质量` / `关闭翻译`；
+- **TTS**：`ZipVoice 克隆` / `关闭`；播放方式默认 `低延迟（小句合成）`，可选 `连贯优先（整句合成）`；参考音色 `自动` / `英文` / `中文`。
+
+自定义参考音：
+
+- 页面“自定义音色”可上传 3–5 秒 WAV（16/24/44.1 kHz 均可，单/双声道取第一声道）；
+- 必须同时填写该段音频的准确文字（1–120 字），否则克隆效果会变差；
+- 上传后服务端启动第三个 ZipVoice worker，约 20 秒加载完成；
+- 上传期间不能开始会话；重启服务后需要重新上传。
+
+`MT` 细节：
 
 - `Opus-MT 快速`：C++ NPU，zh↔en，约 50～110 ms/句；
 - `Qwen 质量`：Qwen3-0.6B，约 20 tok/s（50 板约 8 tok/s）。
@@ -93,44 +106,67 @@ TOOLCHAIN_ROOT=/path/to/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu BSP_MS
 cp build_ax650/opus_mt_worker ../../../../models/opus_mt/bin/
 ```
 
+## 数字读法
+
+ZipVoice 的 tokenizer 虽然接受数字字符，但声学模型经常直接跳过。因此在送 TTS/显示前会先把阿拉伯数字规范化：
+
+- `50` → 中文 `五十`，英文 `fifty`
+- `3.14` → `三点一四` / `three point one four`
+- `50%` → `百分之五十` / `fifty percent`
+- 带单位的长数字按数量读：`100000000元` → `一亿元`
+- **10 位以上且没有单位/量词**的连续数字，按位读：`13800138000` → `一三八零零一三八零零零` / `one three eight zero zero one three eight zero zero zero`
+- 带前导零的编号按位读：`007` → `零零七` / `zero zero seven`
+- 中文年份按位读：`2026年` → `二零二六年`
+
+实现见 `app/number_text.py`；原文和译文都会规范化后再送 MT/TTS。
+
 ## 关键参数
 
 `config/board.yaml`：
 
 - `audio.min_speech_ms: 500`：短于 0.5 s 的噪声段直接丢弃；
-- `audio.pre_roll_ms: 2000` / `audio.post_roll_ms: 600`：给 VAD 边界留足上下文，减少句首/句尾吞字；
+- `audio.min_rms: 0.003`：低于该 RMS 的近静音段不送 ASR，抑制 SenseVoice 在静音上的整句幻觉；
+- `audio.pre_roll_ms: 800` / `audio.post_roll_ms: 600`：留少量上下文，避免把长段环境噪声送进 ASR；
 - `audio.trailing_silence_ms: 1000`：闭句等待，减少一句话被切成碎片；
-- `audio.sentence_merge_ms: 300`：相邻 VAD 段的 PCM 在 0.3 s 内继续出现时按**音频级**合并；优先速度，长停顿仍按新句处理；
-- `audio.max_segment_ms: 6000`：最长小句，避免等整段长语音；
+- `audio.sentence_merge_ms: 0`：流式 ASR 自己保留上下文，不再做文本/音频拼接；
+- `audio.max_segment_ms: 10000`：最长轮次，超过强制成段；
 - `vad.backend: ten`：TEN-VAD，替代能量 VAD；能量 VAD 在自然停顿处会把 70s 录音切成 31 个 1s 碎片，TEN-VAD 只切 19 个 4～6s 段；
 - `asr.stream_enabled: true`：连续 streaming SenseVoice + 离线定稿；`asr.model_dir` 仍用于定稿/回退；
 - `asr.stream_model_dir: models/asr_chain/asr`：流式 SenseVoice 模型；
-- `llm.backend: opus|qwen`：默认 Opus，Qwen 保留为质量模式；
+- `asr.min_text_chars: 2` / `asr.drop_unpunctuated_chars: 12`：过滤纯标点、单字噪声，以及没有句末标点的短中文碎片；
+- `llm.backend: opus|qwen|none`：默认 Opus，Qwen 保留为质量模式，`none` 只输出原文；
 - `llm.opus.model_root`：`models/opus_mt/models`，包含 `zh-en` 和 `en-zh`；
 - `tts.engine: zipvoice`：ZipVoice distill；
+- `tts.speed: 0.9`：语速，数值越小越慢；
+- `tts.voice: auto|en|zh`：参考音色。`auto` 按目标语言选英文/中文参考音；`en`/`zh` 强制使用对应参考音；
+- `tts.zh_prompt_wav/zh_prompt_text`：EN→ZH 使用的中文参考音和转写文本，默认 `zh_1_4p5s.wav`；
+- `tts.continuous: false`：默认按目标小句合成，首音低延迟；设为 `true` 时整句一次提交，播放更连贯但语速/停顿可能不均匀；
 - `tts.prompt_wav/prompt_text`：默认英文克隆参考音；
 - `tts.clause_max_chars: 40`：目标小句长度，控制首帧等待。
 
 ## 已验证
 
+- 连续流式 SenseVoice partial 约 0.5 s 开始出字；
 - 离线 SenseVoice：6.6 s 音频约 0.21 s，RTF ≈ 0.03，输出带中文标点；
 - TEN-VAD + 离线 SenseVoice：`vad_example` 前 10s 从 31 个 1s 碎片变为 4.6s/3.3s 两个完整段，识别从“试错的过程很简”恢复为“试错的过程很简单而且特别是今天报名唱缺卡的同学，你们可以”；
 - ZipVoice distill C++：短句约 RTF 0.7（首句有固定 decoder 开销），模型常驻后不再重载；
-- 完整 WSS：离线 ASR 定稿、Opus-MT 翻译、ZipVoice PCM 回传正常；
+- 整句 TTS（可选）：6.4 s 英文音频约 1.6 s 合成完成，播放端无句间空档；首音约在闭句后 2.1 s；
+- 完整 WSS：流式 partial、离线定稿、Opus-MT 翻译、ZipVoice PCM 回传正常；
 - Opus-MT AX650 C++（50 板）：zh→en 约 57 ms，en→zh 约 108 ms（含首句），BLEU 32.78 / 28.72；
-- 0.6 s 以下语音段被丢弃，不再产生短段乱码；
-- 流式 partial 在 0.5 s 内开始出字；轮次结束用离线模型补标点/纠错；
+- 0.5 s 以下语音段被丢弃；纯标点/单字噪声结果不再建对话对，也不再触发 MT/TTS；
 - 已改为 **连续流式 SenseVoice + 轮次离线定稿**：VAD 只决定 flush 时点，ASR 不再按 1 s 片段重建上下文；
-- 页面上的“识别”指标只显示真实 ASR 耗时；`合并等待` 是 utterance buffer 的端点等待，会单独显示在 meta 里。
+- 页面不再显示延迟指标和运行日志；每句 meta 只保留编号、语音时长和目标语言。
 
 ## 限制
 
-- 非流式 ASR 在段末才出字，适合“小句级同时传译”，不是逐字字幕；
+- 流式 partial 先出字，最终译文使用轮次离线定稿；不是逐字字幕；
 - `models/asr_chain/vad/ten-vad/ten-vad.axmodel` 和 `third_party/ten_vad/libten_vad.so` 是 TEN-VAD 依赖；
-- ZipVoice 是整小句合成后输出 PCM，首帧约 1–1.5 s；不是逐音素流式；
-- 当前默认英文克隆参考音，适合中文→英文；反向翻译可替换 `prompt_wav/prompt_text`；
+- ZipVoice 默认按小句合成（低延迟），首帧约 1.4 s；相邻小句之间可能有合成空档。整句模式更连贯，但首音更晚且语速可能不均匀；
+- 默认 `tts.voice: auto` 会为中文→英文使用英文参考音、英文→中文使用中文参考音；两个 ZipVoice worker 常驻，避免 EN→ZH 误用英文音色；
 - Opus-MT 是固定语言对模型：`zh-en` 和 `en-zh` 各一个，不支持第三种语言；
+- 单麦克风无法可靠区分“本人”和旁边说话的人；如果旁边人声与本人音量接近，建议使用指向性/耳麦麦克风，或在系统层暂停输入；
+- 流式 partial 只在 VAD 已累计约 600 ms 真实语音后显示；纯“嗯/啊”等填充词、单字和短碎片不会进入识别卡片或触发 MT/TTS；
 - Qwen 和 Opus 同时常驻会占更多内存；50 板启动约需 2～3 分钟；
 - 译文音频时长可能长于源语音，连续长时说话仍需要变速或更简洁的译文来控制积压；
-- **防回声默认开启（页面 + 服务端双重）**：译音播放期间麦克风和 ASR 输入都会被静音，避免扬声器声音被再次识别成 `The.` / `Ran.` / `Yeah.`。戴耳机时可以取消该勾选，恢复边说边译；
+- **页面麦克风默认开启防回声**：译音播放期间麦克风和 ASR 输入都会被静音，避免扬声器声音被再次识别成 `The.` / `Ran.` / `Yeah.`。WAV 模拟会自动关闭防回声；戴耳机时也可以取消勾选，恢复边说边译；
 - ZipVoice 的 `num_step=3` / `speed=1.1` 更快配置实测会丢词（`The process of trial.` 只读出 `The process.`），所以默认保留 **4 步 + speed 1.0**；首帧约 1.4 s。

@@ -3,346 +3,550 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>实时语音翻译 · AX650N / ZipVoice</title>
+<title>语音翻译</title>
 <style>
   :root{
-    --bg:#0c1117; --panel:#131b24; --panel2:#18222d; --line:#243140;
-    --txt:#e8eef5; --dim:#8ea0b4; --accent:#39d0a3; --accent2:#59a7ff;
-    --warn:#ffb454; --bad:#ff6b6b;
+    --bg:#0a0e13; --bg2:#0e141c; --panel:#111923; --panel2:#151f2b;
+    --line:#1d2a38; --text:#e7eef5; --muted:#8b9bb0; --dim:#617286;
+    --accent:#3ddc97; --blue:#55a8ff; --warn:#ffb454; --bad:#ff6b81;
+    --radius:14px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#0a0f14,#0d141c 40%,#0a0f14);
-       color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",
-       "PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
-  header{display:flex;align-items:center;gap:14px;padding:14px 22px;
-         border-bottom:1px solid var(--line);background:rgba(12,17,23,.85);
-         position:sticky;top:0;z-index:5;backdrop-filter:blur(8px)}
-  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.3px}
-  header .sub{color:var(--dim);font-size:12px}
-  .pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
-  .pill{border:1px solid var(--line);background:var(--panel);color:var(--dim);
-        padding:3px 9px;border-radius:999px;font-size:11.5px;white-space:nowrap}
-  .pill.on{color:#0a1410;background:var(--accent);border-color:var(--accent)}
-  .pill.warn{color:#1a1205;background:var(--warn);border-color:var(--warn)}
-  main{padding:18px 22px 28px;max-width:1400px;margin:0 auto}
-  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-  button{border:1px solid var(--line);background:var(--panel);color:var(--txt);
-         padding:8px 16px;border-radius:9px;font-size:13.5px;cursor:pointer;
-         transition:.15s all}
-  button:hover:not(:disabled){border-color:#3a4c60;background:var(--panel2)}
-  button:disabled{opacity:.45;cursor:not-allowed}
-  button.primary{background:linear-gradient(180deg,#3ee0ad,#2ab98a);color:#06120d;
-                  border-color:#2ab98a;font-weight:650}
-  button.danger{background:#3a1d22;border-color:#6d2c36;color:#ffb3bd}
-  button.ptt{background:#123047;border-color:#20557c;color:#9fd4ff}
-  button.ptt.active{background:var(--accent2);color:#04121f;border-color:var(--accent2)}
-  select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
-         border-radius:9px;padding:8px 10px;font-size:13px}
-  .switch{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:13px;
-          user-select:none;cursor:pointer}
-  .switch input{accent-color:var(--accent);width:16px;height:16px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:900px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
-        overflow:hidden;min-height:360px;display:flex;flex-direction:column}
-  .card h2{margin:0;padding:10px 14px;font-size:12.5px;font-weight:600;
-           letter-spacing:.6px;color:var(--dim);border-bottom:1px solid var(--line);
-           display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.015)}
-  .card h2 .tag{font-size:10.5px;padding:2px 7px;border-radius:999px;
-                background:#1d2a38;color:#9fb4c9;font-weight:500}
-  .stream{flex:1;padding:14px 16px;overflow-y:auto;max-height:52vh}
-  .line{margin:0 0 12px;padding-left:10px;border-left:2px solid #223041}
-  .line .meta{font-size:11px;color:#657a90;margin-bottom:2px;font-variant-numeric:tabular-nums}
-  .line .text{white-space:pre-wrap;word-break:break-word}
-  .partial{color:#9fb4c9;font-style:italic;min-height:1.6em;padding:0 0 8px;
-           border-bottom:1px dashed #233140;margin-bottom:12px;white-space:pre-wrap}
-  .partial::before{content:"▍ ";color:var(--accent);font-style:normal}
-  .partial:empty::before{content:""}
-  #transPartial{color:#a9ffe1;font-style:normal}
-  #transPartial::before{content:"▶ ";color:var(--accent2)}
-  .empty{color:#4f6275;font-size:13px;text-align:center;padding:40px 0}
-  .transcript-wrap{max-width:980px;margin:0 auto}
-  .card.wide{min-height:420px}
-  .pair{padding:11px 4px 12px;border-bottom:1px solid #1e2b38;border-left:2px solid #25384a;padding-left:12px;margin-bottom:4px;transition:.2s background}
-  .pair:last-child{border-bottom:0}
-  .pair.playing{background:rgba(57,208,163,.06);border-left-color:var(--accent)}
-  .pair .meta{font-size:11px;color:#657a90;font-variant-numeric:tabular-nums;margin-bottom:3px}
-  .pair .src{color:#a9b8c8;font-size:14px;margin-bottom:3px}
-  .pair .src::before{content:"原  ";color:#5f7b95;font-size:11px;letter-spacing:.5px}
-  .pair .dst{color:#eafff8;font-size:16px;font-weight:520;line-height:1.55}
-  .pair .dst::before{content:"译  ";color:var(--accent);font-size:11px;letter-spacing:.5px}
-  .pair .dst:empty::after{content:"…";color:#4f6275}
-  .latency{margin-top:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-  @media(max-width:900px){.latency{grid-template-columns:repeat(2,1fr)}}
-  .metric{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
-  .metric .k{color:var(--dim);font-size:11px}
-  .metric .v{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:2px}
-  .metric .v small{font-size:11px;color:var(--dim);font-weight:400}
-  .bar{height:5px;background:#1b2632;border-radius:99px;overflow:hidden;margin-top:6px}
-  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
-  .hint{color:#5f7387;font-size:12px;margin-top:10px}
-  .log{margin-top:14px;background:#0a1016;border:1px solid var(--line);border-radius:11px;
-       padding:10px 12px;height:96px;overflow:auto;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#7f93a8}
-  .dot{width:7px;height:7px;border-radius:50%;background:#3a4a5c;display:inline-block}
-  .dot.live{background:var(--accent);box-shadow:0 0 0 0 rgba(57,208,163,.6);animation:pulse 1.4s infinite}
-  .dot.rec{background:var(--bad);animation:pulse 1s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(57,208,163,.5)}70%{box-shadow:0 0 0 7px rgba(57,208,163,0)}100%{box-shadow:0 0 0 0 rgba(57,208,163,0)}}
-  .warnbox{display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;
-           background:#2a1f10;border:1px solid #5c4520;color:#ffcf8a;font-size:13px}
-  .warnbox.show{display:block}
+  html,body{height:100%}
+  body{
+    margin:0; background:
+      radial-gradient(900px 420px at 12% -8%,rgba(61,220,151,.08),transparent 60%),
+      radial-gradient(800px 380px at 92% -10%,rgba(85,168,255,.07),transparent 60%),
+      var(--bg);
+    color:var(--text); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,select,input{font:inherit}
+  button{cursor:pointer}
+  .topbar{
+    position:sticky; top:0; z-index:10; border-bottom:1px solid var(--line);
+    background:rgba(10,14,19,.82); backdrop-filter:blur(12px);
+  }
+  .topbar-inner{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px}
+  .brand{display:flex;align-items:center;min-width:0}
+  .brand h1{
+    margin:0;font-size:26px;font-weight:800;letter-spacing:1px;
+    background:linear-gradient(90deg,#f4fffb,#bfffe8 70%,#7fe3bd);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 26px rgba(61,220,151,.12)
+  }
+  .pills{display:flex;gap:7px;margin-left:auto;flex-wrap:wrap}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line);color:var(--muted);background:var(--panel);font-size:11px;white-space:nowrap
+  }
+  .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#3a4a5c}
+  .pill.on{color:#bfffe8;border-color:#245842;background:#10251d}
+  .pill.on::before{background:var(--accent);box-shadow:0 0 8px rgba(61,220,151,.8)}
+  .pill.warn{color:#ffd39b;border-color:#5b4526;background:#251c10}
+  .pill.warn::before{background:var(--warn)}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 20px 34px}
+  .warn{display:none;margin:0 0 14px;padding:10px 13px;border:1px solid #5b4526;background:#251c10;color:#ffd39b;border-radius:10px;font-size:12.5px}
+  .warn.show{display:block}
+  .warn a{color:#ffd39b}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:16px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 18px 55px rgba(0,0,0,.22)}
+  .conversation{min-height:560px;height:calc(100vh - 132px);display:flex;flex-direction:column}
+  .conv-head{display:flex;align-items:center;gap:10px;padding:13px 17px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
+  .conv-head h2{margin:0;font-size:13.5px;letter-spacing:.3px}
+  .conv-sub{color:var(--dim);font-size:11px;letter-spacing:.4px}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#3a4a5c;margin-left:auto}
+  .live-dot.on{background:var(--accent);box-shadow:0 0 0 0 rgba(61,220,151,.55);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,151,.45)}70%{box-shadow:0 0 0 8px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
+  .transcript{
+    flex:1;min-height:0;overflow-y:auto;padding:20px 22px 26px;
+    background:
+      radial-gradient(520px 280px at 100% 0,rgba(61,220,151,.035),transparent 70%),
+      linear-gradient(180deg,rgba(255,255,255,.012),transparent 34%);
+  }
+  .empty{
+    min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:44px 20px;color:var(--dim);font-size:13px
+  }
+  .empty-orb{
+    width:78px;height:78px;border-radius:24px;display:grid;place-items:center;
+    background:linear-gradient(145deg,#183f32,#0d1b16);border:1px solid #2b5b49;
+    color:var(--accent);font-size:30px;font-weight:800;margin-bottom:18px;
+    box-shadow:0 0 0 8px rgba(61,220,151,.035),0 0 42px rgba(61,220,151,.13)
+  }
+  .empty b{display:block;color:#d8eee5;font-size:19px;letter-spacing:.3px}
+  .empty p{max-width:390px;line-height:1.75;margin:8px 0 18px;color:#6f8396}
+  .empty-chips{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+  .empty-chips span{
+    padding:4px 9px;border:1px solid #203041;border-radius:999px;
+    color:#71879a;background:#0f1922;font-size:10.5px
+  }
+  .pair{padding:0 0 17px 15px;margin:0 0 15px;border-left:2px solid #223244;border-radius:0 8px 8px 0;transition:.2s}
+  .pair:last-child{margin-bottom:0}
+  .pair.playing{border-left-color:var(--accent);background:linear-gradient(90deg,rgba(61,220,151,.055),transparent 70%)}
+  .pair .meta{display:flex;gap:8px;flex-wrap:wrap;color:#5f7286;font-size:10.5px;font-variant-numeric:tabular-nums;margin-bottom:5px}
+  .pair .meta .uid{color:#7f95ab}
+  .pair .src{color:#93a5b8;font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .pair .src::before{content:"原文";display:inline-block;color:#526980;background:#14212d;border:1px solid #203041;border-radius:5px;padding:0 5px;margin-right:7px;font-size:10px;line-height:17px;vertical-align:1px}
+  .pair .dst{color:#f0fbf7;font-size:17px;line-height:1.65;font-weight:500;margin-top:3px;white-space:pre-wrap;word-break:break-word}
+  .pair .dst::before{content:"译文";display:inline-block;color:#0b1a14;background:#3ddc97;border-radius:5px;padding:0 5px;margin-right:7px;font-size:10px;line-height:17px;vertical-align:1px}
+  .pair .dst:empty::after{content:"…";color:#506477}
+  .pair.mt-off .dst{display:none}
+  .pair.mt-off .src{color:#f0fbf7;font-size:16px;font-weight:500}
+  .live{display:none;margin-top:8px;padding:10px 13px;border:1px solid #223345;background:#0e1720;border-radius:10px;color:#9fb4c9;font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .live.show{display:block}
+  .live::before{content:"●";color:var(--accent);margin-right:7px;font-size:9px;vertical-align:1px}
+  .conv-status{
+    display:flex;align-items:center;gap:11px;padding:11px 17px;min-height:48px;
+    border-top:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.012),rgba(0,0,0,.10))
+  }
+  .conv-status .hint{color:var(--dim);font-size:12px;transition:color .15s,background .15s}
+  .conv-status .hint.hot{
+    color:#06130e;background:var(--accent);font-size:12.5px;font-weight:800;
+    padding:3px 9px;border-radius:999px;box-shadow:0 0 18px rgba(61,220,151,.35)
+  }
+  .status-wave{display:flex;align-items:flex-end;gap:3px;height:16px;width:26px;flex:none}
+  .status-wave i{display:block;width:3px;height:4px;border-radius:2px;background:#355144;transition:background .15s}
+  .conv-status.active .status-wave i{background:var(--accent);animation:wave 1s ease-in-out infinite}
+  .conv-status.active .status-wave i:nth-child(2){animation-delay:.12s}
+  .conv-status.active .status-wave i:nth-child(3){animation-delay:.24s}
+  .conv-status.active .status-wave i:nth-child(4){animation-delay:.36s}
+  .conv-status.active .status-wave i:nth-child(5){animation-delay:.48s}
+  @keyframes wave{0%,100%{height:4px}50%{height:14px}}
+  .rail{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .panel{padding:14px 15px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 12px 34px rgba(0,0,0,.13)}
+  .panel h3{margin:0 0 10px;color:#a9bbcc;font-size:11px;letter-spacing:.9px;text-transform:uppercase;font-weight:650}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{
+    border:1px solid var(--line);background:var(--panel2);color:#d8e4ef;border-radius:9px;
+    padding:8px 12px;font-size:12.5px;transition:.15s;white-space:nowrap
+  }
+  .btn:hover:not(:disabled){border-color:#365069;background:#1a2735}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.primary{background:linear-gradient(180deg,#42e3a1,#2dbb82);border-color:#35c48e;color:#06130e;font-weight:700}
+  .btn.danger{background:#26141a;border-color:#5c2632;color:#ffb2c0}
+  .field{display:flex;flex-direction:column;gap:4px;margin-top:9px}
+  .field:first-of-type{margin-top:0}
+  .field label{color:var(--dim);font-size:10.5px;letter-spacing:.4px}
+  select{
+    width:100%;background:#0d1620;border:1px solid var(--line);color:#dce8f2;border-radius:8px;
+    padding:7px 9px;font-size:12px;outline:none
+  }
+  .field input[type=text],.field input[type=file]{
+    width:100%;background:#0d1620;border:1px solid var(--line);color:#dce8f2;border-radius:8px;
+    padding:7px 9px;font-size:12px;outline:none
+  }
+  .field input[type=file]{padding:5px 7px;font-size:11px}
+  .field input[type=text]:focus,.field input[type=file]:focus,select:focus{border-color:#2c5a47}
+  .switches{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+  .switch{display:flex;align-items:center;gap:8px;color:#9fb0c2;font-size:12px;user-select:none;cursor:pointer}
+  .switch input{accent-color:var(--accent);width:14px;height:14px;margin:0}
+  .sub{color:var(--dim);font-size:11px;margin-top:7px;line-height:1.45}
+  @media(max-width:980px){
+    .layout{grid-template-columns:1fr}
+    .conversation{height:62vh;min-height:430px}
+    .rail{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .rail .panel:first-child{grid-column:1/-1}
+  }
+  @media(max-width:620px){
+    .wrap{padding:12px}
+    .topbar-inner{padding:10px 12px}
+    .rail{grid-template-columns:1fr}
+    .conversation{height:58vh}
+    .transcript{padding:14px}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>实时语音翻译</h1>
-  <span class="sub">AX650N · 离线 SenseVoice → Qwen3 → ZipVoice Distill</span>
-  <div class="pills" id="pills">
-    <span class="pill" id="pillWs">未连接</span>
-    <span class="pill" id="pillAsr">ASR —</span>
-    <span class="pill" id="pillLlm">MT —</span>
-    <span class="pill" id="pillTts">TTS —</span>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><h1>语音翻译</h1></div>
+    <div class="pills">
+      <span class="pill" id="pillWs">未连接</span>
+      <span class="pill" id="pillAsr">ASR —</span>
+      <span class="pill" id="pillMt">MT —</span>
+      <span class="pill" id="pillTts">TTS —</span>
+    </div>
   </div>
 </header>
-<main>
-  <div class="warnbox" id="warnbox"></div>
-  <div class="controls">
-    <button class="primary" id="btnStart">开始</button>
-    <button class="danger" id="btnStop" disabled>停止</button>
-    <button class="ptt" id="btnPtt" title="按住说话，松开静音">按住说话</button>
-    <select id="selDir" title="翻译方向">
-      <option value="auto">自动方向</option>
-      <option value="en">中文 → English</option>
-      <option value="zh">English → 中文</option>
-    </select>
-    <select id="selMt" title="翻译引擎">
-      <option value="opus">MT: Opus-MT 快速</option>
-      <option value="qwen">MT: Qwen 质量</option>
-    </select>
-    <label class="switch"><input type="checkbox" id="chkPlay" checked> 播放译音</label>
-    <label class="switch" title="免提/扬声器时防止译音被麦克风重新识别"><input type="checkbox" id="chkEcho" checked> 防回声（译音时静音麦克风）</label>
-    <label class="switch"><input type="checkbox" id="chkPtt"> 仅按住时发送</label>
-    <label class="switch"><input type="checkbox" id="chkBarge"> 新语音打断 TTS</label>
-    <span class="hint" id="stateHint">点击“开始”并允许麦克风</span>
-  </div>
 
-  <div class="controls" style="margin-top:-4px">
-    <span class="hint" style="color:#7fd7ff">音频模拟麦克风</span>
-    <select id="selSample" title="用 WAV 实时喂给服务端，模拟麦克风"></select>
-    <button class="ptt" id="btnSim">播放并模拟</button>
-    <button id="btnSimStop" disabled>停止模拟</button>
-    <label class="switch"><input type="checkbox" id="chkSimLoop"> 循环</label>
-    <span class="hint" id="simHint">无需麦克风权限，HTTP 页面可直接使用</span>
-  </div>
-
-  <div class="transcript-wrap">
-    <section class="card wide">
-      <h2>对话流 <span class="tag" id="modeTag">原文 / 译文</span></h2>
-      <div class="stream" id="transcript">
-        <div class="partial" id="livePartial"></div>
-        <div id="pairLines"></div>
-        <div class="empty" id="pairEmpty">等待语音…</div>
+<main class="wrap">
+  <div class="warn" id="warn"></div>
+  <div class="layout">
+    <section class="card conversation">
+      <div class="conv-head">
+        <h2>对话</h2>
+        <span class="conv-sub">实时记录</span>
+        <span class="live-dot" id="liveDot"></span>
+      </div>
+      <div class="transcript" id="transcript">
+        <div class="empty" id="empty">
+          <div class="empty-orb">译</div>
+          <b>开始一段对话</b>
+          <p>直接说话，或用右侧 WAV 模拟。识别、翻译和译音会自动出现在这里。</p>
+          <div class="empty-chips"><span>流式识别</span><span>实时翻译</span><span>克隆语音</span></div>
+        </div>
+        <div id="pairs"></div>
+        <div class="live" id="live"><span id="liveText"></span></div>
+      </div>
+      <div class="conv-status" id="convStatus">
+        <span class="status-wave" id="statusWave"><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="hint" id="stateHint">点击开始并允许麦克风</span>
       </div>
     </section>
-  </div>
 
-  <div class="latency">
-    <div class="metric"><div class="k">出声 → 出字</div><div class="v" id="mAsr">—</div><div class="bar"><i id="bAsr"></i></div></div>
-    <div class="metric"><div class="k">ASR 识别（不含合并等待）</div><div class="v" id="mFin">—</div><div class="bar"><i id="bFin"></i></div></div>
-    <div class="metric"><div class="k">定稿 → 译文</div><div class="v" id="mMt">—</div><div class="bar"><i id="bMt"></i></div></div>
-    <div class="metric"><div class="k">译文 → 首帧音</div><div class="v" id="mTts">—</div><div class="bar"><i id="bTts"></i></div></div>
-    <div class="metric"><div class="k">开口/闭句 → 首帧音</div><div class="v" id="mE2e">—</div><div class="bar"><i id="bE2e"></i></div></div>
+    <aside class="rail">
+      <section class="panel">
+        <h3>会话</h3>
+        <div class="row">
+          <button class="btn primary" id="btnStart">开始</button>
+          <button class="btn danger" id="btnStop" disabled>停止</button>
+        </div>
+        <div class="switches">
+          <label class="switch"><input type="checkbox" id="chkPlay" checked> 播放译音</label>
+          <label class="switch"><input type="checkbox" id="chkEcho" checked> 防回声（译音时静音麦克风）</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>模式</h3>
+        <div class="field">
+          <label>识别 ASR</label>
+          <select id="selAsr">
+            <option value="hybrid">流式 + 离线定稿（推荐）</option>
+            <option value="offline">仅离线定稿</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>翻译 MT</label>
+          <select id="selMt">
+            <option value="opus">Opus-MT 快速</option>
+            <option value="qwen">Qwen3-0.6B 质量</option>
+            <option value="none">关闭翻译（只保留原文）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>语音 TTS</label>
+          <select id="selTts">
+            <option value="on">ZipVoice 克隆音色</option>
+            <option value="off">关闭 TTS</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>播放方式</label>
+          <select id="selTtsMode">
+            <option value="fast" selected>低延迟（小句合成，可能有停顿）</option>
+            <option value="continuous">连贯优先（整句合成）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>参考音色</label>
+          <select id="selVoice">
+            <option value="auto">自动（按目标语言）</option>
+            <option value="en">英文参考音（en_4）</option>
+            <option value="zh">中文参考音（zh_1）</option>
+            <option value="custom" id="optCustomVoice" disabled>自定义参考音（未上传）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>翻译方向</label>
+          <select id="selDir">
+            <option value="auto">自动检测</option>
+            <option value="en">中文 → English</option>
+            <option value="zh">English → 中文</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>自定义音色</h3>
+        <div class="field">
+          <label>ZipVoice 参考音（WAV）</label>
+          <input type="file" id="voiceFile" accept=".wav,audio/wav">
+          <input type="text" id="voiceText" maxlength="120" placeholder="参考音频对应文字（必须准确，1–120 字）">
+          <button class="btn" id="btnVoiceUpload" type="button">上传并加载</button>
+        </div>
+        <div class="sub" id="voiceHint">上传前请先停止会话；3–5 秒 WAV；文字必须与音频内容一致（1–120 字）</div>
+      </section>
+
+      <section class="panel">
+        <h3>音频输入</h3>
+        <div class="field">
+          <label>WAV 模拟麦克风</label>
+          <select id="selSample"></select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="btnSim">播放并模拟</button>
+          <button class="btn" id="btnSimStop" disabled>停止</button>
+        </div>
+        <div class="switches">
+          <label class="switch"><input type="checkbox" id="chkLoop"> 循环模拟</label>
+        </div>
+        <div class="sub" id="simHint">WAV 模拟不会触发真实麦克风，可直接在 HTTP 页面测试</div>
+      </section>
+
+    </aside>
   </div>
-  <div class="log" id="log"></div>
 </main>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const S = {
-    ws: null, started: false, pttMode: false, pttDown: false, play: true,
-    micCtx: null, playCtx: null, stream: null, proc: null, source: null,
-    sendRate: 16000, resamplePhase: 0, resamplePrev: 0, echoGuard: true, echoMuted: false,
-    sources: [], nextPlay: 0, ttsQueue: 0, firstTs: null,
-    segCount: 0, ttsFrames: 0, speechStart: 0, m: {},
-    simTimer: null, simActive: false, simPcm: null, simPos: 0, simTail: 0,
+    ws: null, started: false, play: true, echo: true,
+    micCtx: null, playCtx: null, stream: null, proc: null, sendRate: 16000,
+    resamplePhase: 0, resamplePrev: 0, sources: [], nextPlay: 0, echoMuted: false,
+    simTimer: null, simPcm: null, simPos: 0, simTail: 0, simActive: false,
+    tlsPort: 0, mtOff: false, sessionSeq: 0, speaking: false, voicePoll: null,
   };
 
-  const log = (msg) => {
-    const el = $("log");
-    const t = new Date().toLocaleTimeString("zh-CN", {hour12:false});
-    el.textContent += `[${t}] ${msg}\n`;
-    el.scrollTop = el.scrollHeight;
-  };
-  const setPill = (id, text, cls) => { const el=$(id); el.textContent=text; el.className="pill"+(cls?" "+cls:""); };
-  const fmt = (v, unit="ms") => v==null||isNaN(v) ? "—" : (v>=1000 ? (v/1000).toFixed(2)+" s" : Math.round(v)+" "+unit);
-  const metric = (id, bar, v, max) => {
-    $(id).textContent = v==null ? "—" : fmt(v);
-    $(bar).style.width = v==null ? "0%" : Math.min(100, 100*v/(max||3000))+"%";
-  };
-  const now = () => performance.now();
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const online = () => S.ws && S.ws.readyState === WebSocket.OPEN;
+  const hasText = (t) => /[0-9A-Za-z\u4e00-\u9fff]/.test(t || "");
+  function log(_msg) {}
+  function pill(id, text, cls) {
+    const el = $(id); el.textContent = text; el.className = "pill" + (cls ? " " + cls : "");
+  }
+  function showEmpty(show) { $("empty").style.display = show ? "" : "none"; }
+  function scrollBottom() {
+    const el = $("transcript"); el.scrollTop = el.scrollHeight;
+  }
 
   // ---------------------------------------------------------------- websocket
   function connect() {
-    const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
-    ws.binaryType = "arraybuffer";
+    const url = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+    const ws = new WebSocket(url);
     S.ws = ws;
-    ws.onopen = () => {
-      setPill("pillWs", "已连接", "on");
-      log("WebSocket 已连接");
-    };
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => { pill("pillWs", "已连接", "on"); log("WebSocket 已连接"); };
     ws.onclose = () => {
-      setPill("pillWs", "已断开", "warn");
+      pill("pillWs", "已断开", "warn");
       if (S.started) stopAll(false);
       setTimeout(connect, 1500);
     };
     ws.onerror = () => log("WebSocket 错误");
     ws.onmessage = (ev) => {
-      if (typeof ev.data === "string") onEvent(JSON.parse(ev.data));
-      else onAudio(ev.data);
+      if (typeof ev.data === "string") {
+        try { onEvent(JSON.parse(ev.data)); } catch (e) { log("事件解析失败"); }
+      } else onAudio(ev.data);
     };
   }
-
   function send(obj) { if (online()) S.ws.send(JSON.stringify(obj)); }
 
+  function applyStatus(st) {
+    if (!st) return;
+    if (st.tls_port) S.tlsPort = st.tls_port;
+    const asrOn = st.asr_stream || st.asr_offline;
+    pill("pillAsr", st.asr_mode === "offline" ? "ASR 离线" : "ASR 流式", asrOn ? "on" : "warn");
+    const mtName = st.mt_backend === "none" ? "翻译关闭" : (st.mt_backend === "qwen" ? "Qwen" : "Opus-MT");
+    pill("pillMt", "MT " + mtName, st.mt_backend === "none" ? "" : (st.llm ? "on" : "warn"));
+    pill("pillTts", st.tts_enabled ? (st.tts ? "TTS 开" : "TTS 未就绪") : "TTS 关",
+         st.tts_enabled ? (st.tts ? "on" : "warn") : "");
+    if (st.asr_mode) $("selAsr").value = st.asr_mode;
+    if (st.mt_backend) $("selMt").value = st.mt_backend;
+    if (st.tts_enabled != null) $("selTts").value = st.tts_enabled ? "on" : "off";
+    if (st.tts_continuous != null) $("selTtsMode").value = st.tts_continuous ? "continuous" : "fast";
+    const customReady = !!st.tts_custom;
+    const customLoading = !!st.tts_custom_loading;
+    const optCustom = $("optCustomVoice");
+    if (optCustom) {
+      optCustom.disabled = !customReady;
+      optCustom.textContent = customLoading ? "自定义参考音（加载中…）"
+        : customReady ? "自定义参考音" : "自定义参考音（未上传）";
+    }
+    if (st.tts_voice && (st.tts_voice !== "custom" || customReady)) {
+      $("selVoice").value = st.tts_voice;
+    }
+    $("btnVoiceUpload").disabled = customLoading || !!st.session;
+    if (customLoading) {
+      $("voiceHint").textContent = "参考音色加载中（约 20 秒）…";
+    } else if (st.tts_custom_error) {
+      $("voiceHint").textContent = "参考音色加载失败：" + st.tts_custom_error;
+    } else if (customReady) {
+      $("voiceHint").textContent = "自定义参考音已就绪：" +
+        (st.tts_custom_name || "reference.wav");
+    }
+    if (customLoading && !S.voicePoll) startVoicePoll();
+    if (st.direction) $("selDir").value = st.direction;
+    S.mtOff = st.mt_backend === "none";
+    updateWarn();
+  }
   function onEvent(m) {
+    // Ignore late ASR/TTS events after local stop/disconnect.
+    if (!S.started && [
+      "speech_start", "asr_partial", "speech_end", "speech_skipped",
+      "asr_final", "trans_token", "trans_final", "tts_start",
+      "tts_first_frame", "tts_end", "asr_empty",
+    ].includes(m.type)) return;
     switch (m.type) {
       case "hello":
-        if (m.status) applyStatus(m.status);
-        break;
-      case "status":
-        if (m.status) applyStatus(m.status);
-        break;
-      case "mt_backend":
-        if (m.value) $("selMt").value = m.value;
-        log("MT 引擎：" + (m.value === "qwen" ? "Qwen 质量" : "Opus-MT 快速"));
-        if (m.status) applyStatus(m.status);
-        break;
+      case "status": applyStatus(m.status); break;
       case "ready":
-        setPill("pillAsr", "ASR 就绪", "on");
+        S.sessionSeq += 1; S.speaking = false;
+        pill("pillAsr", "ASR 就绪", "on");
+        setHint("正在听…");
         log("会话已开始");
         break;
       case "speech_start":
-        setHint("检测到语音…");
-        S.speechStart = now();
-        S.m = {};
-        $("livePartial").textContent = "正在听…";
-        $("livePartial").classList.add("live");
+        S.speaking = true;
+        S.started && setHint("检测到语音…", true);
+        $("liveText").textContent = "正在听…";
+        $("live").classList.add("show");
+        $("liveDot").classList.add("on");
+        showEmpty(false);
+        scrollBottom();
         break;
       case "asr_partial":
-        $("livePartial").textContent = m.text || "";
+        if (!hasText(m.text)) break;
+        $("liveText").textContent = m.text || "";
+        $("live").classList.add("show");
+        showEmpty(false);
+        scrollBottom();
         break;
       case "speech_end":
-        setHint("闭句 " + (m.seconds||0).toFixed(2) + " s，识别中…");
-        $("livePartial").textContent = "识别中…";
+        S.speaking = false;
+        setHint("识别中…");
+        $("liveText").textContent = "识别中…";
+        $("liveDot").classList.remove("on");
+        scrollBottom();
         break;
       case "speech_skipped":
-        log(`忽略过短语音 ${m.seconds}s`);
-        $("livePartial").textContent = "";
+        S.speaking = false;
+        log("忽略过短语音 " + (m.seconds || 0).toFixed(2) + " s");
+        $("live").classList.remove("show");
+        if (S.started) setHint("正在听…");
+        scrollBottom();
         break;
       case "asr_final": {
+        if (!hasText(m.text)) {
+          log("忽略无文字识别结果");
+          $("live").classList.remove("show");
+          $("liveDot").classList.remove("on");
+          setHint("未识别到有效文本");
+          break;
+        }
+        S.speaking = false;
         const p = ensurePair(m.uid);
-        p.meta.textContent = `#${m.uid} · ${m.audio_s}s 语音 · 识别 ${Math.round(m.asr_ms||0)}ms`
-          + (m.merge_ms ? ` · 合并等待 ${Math.round(m.merge_ms)}ms` : "");
-        typeText(p.src, m.text);
-        $("livePartial").textContent = "";
-        $("pairEmpty").style.display = "none";
-        metric("mFin", "bFin", m.asr_ms != null ? m.asr_ms : m.latency_ms, 1000);
-        S.m.fin = m.asr_ms || 0;
-        S.firstTs = { end: now() };
+        p.el.classList.toggle("mt-off", S.mtOff);
+        const meta = [`#${m.uid}`, (m.audio_s || 0).toFixed(2) + " s 语音"];
+        p.meta.textContent = meta.join(" · ");
+        typeText(p.src, m.text || "");
+        $("live").classList.remove("show");
+        $("liveDot").classList.remove("on");
+        showEmpty(false);
+        setHint("翻译中…");
+        scrollBottom();
         break;
       }
       case "trans_token": {
         const p = ensurePair(m.uid);
+        p.el.classList.toggle("mt-off", S.mtOff);
         p.dst.textContent += m.text || "";
-        $("pairEmpty").style.display = "none";
+        showEmpty(false);
+        scrollBottom();
         break;
       }
       case "trans_final": {
         const p = ensurePair(m.uid);
+        p.el.classList.toggle("mt-off", S.mtOff);
         p.dst.textContent = m.text || "";
-        p.meta.textContent += ` · MT ${Math.round(m.ms||0)}ms` + (m.ttft_ms ? ` / 首token ${Math.round(m.ttft_ms)}ms` : "");
-        metric("mMt", "bMt", m.ms, 3000);
-        S.m.mt = m.ms || 0;
+        const meta = [`#${m.uid}`];
+        meta.push(S.mtOff ? "原文" : (m.target === "en" ? "EN" : "中文"));
+        p.meta.textContent = meta.join(" · ");
+        setHint("译音加载中…");
+        scrollBottom();
         break;
       }
       case "tts_start":
-        S.ttsFrames = 0;
-        if (!S.play) log("TTS 已生成（播放已关闭）");
         break;
-      case "tts_first_frame":
-        { const p = ensurePair(m.uid); p.el.classList.add("playing"); }
-        metric("mTts", "bTts", m.ms, 1000);
-        S.m.tts = m.ms || 0;
-        // Server-side: first clause submission to first PCM of this utterance,
-        // measured from its speech_end.  This is the real end-to-end latency.
-        if (m.since_speech_end_ms != null) {
-          metric("mE2e", "bE2e", m.since_speech_end_ms, 5000);
-        } else if (m.since_speech_start_ms != null) {
-          metric("mE2e", "bE2e", m.since_speech_start_ms, 5000);
-        }
-        log(`TTS 首帧 ${Math.round(m.ms||0)} ms` +
-            (m.since_speech_end_ms != null
-              ? ` · 闭句→出声 ${Math.round(m.since_speech_end_ms)} ms`
-              : (m.since_speech_start_ms != null
-                 ? ` · 开口→出声 ${Math.round(m.since_speech_start_ms)} ms` : "")));
+      case "tts_first_frame": {
+        const p = pairFor(m.uid);
+        if (p) p.el.classList.add("playing");
+        log("TTS 首帧 " + Math.round(m.ms || 0) + " ms");
         break;
+      }
       case "tts_end": {
-        const p = ensurePair(m.uid); p.el.classList.remove("playing");
-        log(`TTS 完成：${m.frames} 帧 / ${Math.round(m.ms||0)} ms` + (m.cancelled ? "（被新语音打断）" : ""));
+        const p = pairFor(m.uid);
+        if (p) p.el.classList.remove("playing");
+        log("TTS 完成 " + (m.frames || 0) + " 帧");
+        if (S.started && !S.speaking) setHint("正在听…");
         break;
       }
       case "tts_cancel":
         clearAudio();
         break;
       case "asr_empty":
+        S.speaking = false;
         log("未识别到有效文本");
-        $("livePartial").textContent = "";
+        $("live").classList.remove("show");
+        if (S.started) setHint("正在听…");
+        scrollBottom();
+        break;
+      case "asr_mode":
+        if (m.value) $("selAsr").value = m.value;
+        applyStatus(m.status);
+        log("ASR 模式：" + (m.value === "offline" ? "离线定稿" : "流式 + 定稿"));
+        break;
+      case "mt_backend":
+        if (m.value) $("selMt").value = m.value;
+        applyStatus(m.status);
+        log("MT 引擎：" + (m.value === "none" ? "关闭" : m.value === "qwen" ? "Qwen" : "Opus-MT"));
+        break;
+      case "tts_enabled":
+        if (m.value != null) $("selTts").value = m.value ? "on" : "off";
+        applyStatus(m.status);
+        log("TTS：" + (m.value ? "开启" : "关闭"));
+        break;
+      case "tts_continuous":
+        if (m.value != null) $("selTtsMode").value = m.value ? "continuous" : "fast";
+        applyStatus(m.status);
+        log("TTS 播放：" + (m.value ? "连贯优先（整句合成）" : "低延迟（小句合成）"));
+        break;
+      case "tts_voice":
+        if (m.value) $("selVoice").value = m.value;
+        applyStatus(m.status);
+        log("参考音色：" + (m.value === "zh" ? "中文" : m.value === "en" ? "英文" : "自动"));
         break;
       case "error":
         log("错误：" + (m.message || "unknown"));
-        $("warnbox").textContent = m.message || "处理失败";
-        $("warnbox").classList.add("show");
+        if (m.message === "busy" || m.message === "voice loading") {
+          stopAll(false);
+          showWarn(m.message === "busy"
+            ? "已有会话在运行，请先停止另一个页面或重启服务。"
+            : "参考音色还在加载，请等加载完成后再开始。");
+          break;
+        }
+        showWarn("处理失败：" + (m.message || "unknown"));
         break;
       case "stopped":
+        S.started = false; S.speaking = false;
+        $("btnStart").disabled = false;
+        $("btnStop").disabled = true;
+        $("btnVoiceUpload").disabled = !!S.voicePoll;
+        $("liveDot").classList.remove("on");
+        setHint("已停止");
         log("会话已停止");
         break;
     }
-    if (m.t != null) S.lastEventT = m.t;
   }
 
-  function applyStatus(st) {
-    setPill("pillAsr", st.asr_offline ? "ASR 就绪" : (st.asr_stream ? "ASR 流式" : "ASR 加载中"), st.asr_offline||st.asr_stream ? "on" : "warn");
-    setPill("pillLlm", st.llm ? "MT 就绪" : "MT 加载中", st.llm ? "on" : "warn");
-    if (st.mt_backend) $("selMt").value = st.mt_backend;
-    setPill("pillTts", st.tts ? "TTS 就绪" : "TTS 加载中", st.tts ? "on" : "warn");
-    if (st.mock) log("mock 模式：无 NPU 模型");
+  function pairKey(uid) { return "s" + S.sessionSeq + "-" + uid; }
+  function pairFor(uid) {
+    const el = document.getElementById("pair-" + pairKey(uid));
+    return el ? {el, meta: el.querySelector(".meta"), src: el.querySelector(".src"), dst: el.querySelector(".dst")} : null;
   }
-
-  function addLine(container, text, meta) {
-    const box = $(container);
-    const div = document.createElement("div");
-    div.className = "line";
-    div.innerHTML = `<div class="meta"></div><div class="text"></div>`;
-    div.querySelector(".meta").textContent = meta || "";
-    div.querySelector(".text").textContent = text || "";
-    box.appendChild(div);
-    box.parentElement.scrollTop = box.parentElement.scrollHeight;
-  }
-
   function ensurePair(uid) {
-    let el = document.getElementById("pair-" + uid);
-    if (!el) {
-      el = document.createElement("div");
+    let p = pairFor(uid);
+    if (!p) {
+      const el = document.createElement("article");
       el.className = "pair";
-      el.id = "pair-" + uid;
+      el.id = "pair-" + pairKey(uid);
       el.innerHTML = `<div class="meta"></div><div class="src"></div><div class="dst"></div>`;
-      $("pairLines").appendChild(el);
+      $("pairs").appendChild(el);
+      p = {el, meta: el.querySelector(".meta"), src: el.querySelector(".src"), dst: el.querySelector(".dst")};
     }
-    return {el, meta: el.querySelector(".meta"),
-            src: el.querySelector(".src"), dst: el.querySelector(".dst")};
+    return p;
   }
-
   function typeText(el, text) {
     if (el._timer) clearInterval(el._timer);
     const full = text || "";
@@ -350,85 +554,67 @@
     let i = 0;
     el._timer = setInterval(() => {
       el.textContent = full.slice(0, ++i);
+      scrollBottom();
       if (i >= full.length) { clearInterval(el._timer); el._timer = null; }
-      $("transcript").scrollTop = $("transcript").scrollHeight;
-    }, 18);
+    }, 12);
   }
+  function setHint(t, hot = false) {
+    const el = $("stateHint");
+    el.textContent = t;
+    el.classList.toggle("hot", !!hot);
+    const status = $("convStatus");
+    if (status) status.classList.toggle("active", !!hot);
+  }
+  function showWarn(t) { $("warn").textContent = t; $("warn").classList.add("show"); }
 
-  function setHint(t) { $("stateHint").textContent = t; }
-
-  // ---------------------------------------------------------------- mic input
+  // ---------------------------------------------------------------- mic
   async function startMic() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error("浏览器不支持麦克风采集");
-    }
-    if (!window.isSecureContext && location.hostname !== "localhost") {
-      $("warnbox").textContent = "浏览器要求 HTTPS 或 localhost 才能使用麦克风；请用 http://localhost 或配置证书。";
-      $("warnbox").classList.add("show");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("浏览器不支持麦克风");
+    if (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(location.hostname)) {
+      showWarn("麦克风需要 HTTPS 或 localhost；请打开 HTTPS 入口，或使用 WAV 模拟。");
     }
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true,
-              channelCount: 1, sampleRate: 16000},
-      video: false,
+              channelCount: 1, sampleRate: 16000}, video: false
     });
     S.stream = stream;
     let ctx;
-    try {
-      ctx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000});
-    } catch (e) {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000}); }
+    catch (e) { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
     S.micCtx = ctx;
     await ctx.resume();
     S.sendRate = ctx.sampleRate;
     const src = ctx.createMediaStreamSource(stream);
     const proc = ctx.createScriptProcessor(1024, 1, 1);
     S.proc = proc;
-    const mute = ctx.createGain();
-    mute.gain.value = 0;
-    src.connect(proc);
-    proc.connect(mute);
-    mute.connect(ctx.destination);
+    const mute = ctx.createGain(); mute.gain.value = 0;
+    src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
     proc.onaudioprocess = (e) => {
       if (!S.started) return;
       const input = e.inputBuffer.getChannelData(0);
-      // Half-duplex echo guard for laptop/phone speakers: while the TTS
-      // queue is playing (or about to play), send silence so the microphone
-      // does not re-recognise the translated voice as a new utterance.
-      if (S.echoGuard && S.playCtx && S.nextPlay > S.playCtx.currentTime + 0.05) {
-        const n = Math.max(1, Math.floor(input.length * 16000 / S.sendRate));
+      const n = Math.max(1, Math.floor(input.length * 16000 / S.sendRate));
+      if (S.echo && S.playCtx && S.nextPlay > S.playCtx.currentTime + 0.05) {
         if (online()) S.ws.send(new Int16Array(n).buffer);
-        if (!S.echoMuted) {
-          S.echoMuted = true;
-          log("译音播放中：麦克风静音防回声（可取消勾选）");
-        }
+        if (!S.echoMuted) { S.echoMuted = true; log("译音播放中：麦克风静音防回声"); }
         return;
       }
       if (S.echoMuted) { S.echoMuted = false; log("麦克风恢复"); }
-      if (S.pttMode && !S.pttDown) {
-        // Keep the VAD clock running so releasing PTT closes the utterance.
-        const n = Math.max(1, Math.floor(input.length * 16000 / S.sendRate));
-        if (online()) S.ws.send(new Int16Array(n).buffer);
-        return;
-      }
-      const pcm = resampleTo16k(input, S.sendRate);
+      const pcm = resample(input, S.sendRate);
       if (online() && pcm.length) S.ws.send(pcm.buffer);
     };
-    log(`麦克风已开启：${S.sendRate} Hz → 16000 Hz`);
+    log("麦克风已开启：" + S.sendRate + " Hz → 16000 Hz");
   }
-
-  // Persistent decimator/interpolator to 16 kHz.  `step` is expressed in
-  // input samples per output sample (3 for 48 kHz), so 1024 input samples
-  // produce ~341 output samples, not 3072.
-  function resampleTo16k(input, inRate) {
+  function stopMic() {
+    if (S.proc) { try { S.proc.disconnect(); } catch (e) {} S.proc.onaudioprocess = null; S.proc = null; }
+    if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+    if (S.micCtx) { try { S.micCtx.close(); } catch (e) {} S.micCtx = null; }
+  }
+  function resample(input, inRate) {
     if (inRate === 16000) return toInt16(input);
-    const step = inRate / 16000;
-    const out = [];
-    let phase = S.resamplePhase || 0;
-    let prev = S.resamplePrev || input[0];
+    const step = inRate / 16000, out = [];
+    let phase = S.resamplePhase || 0, prev = S.resamplePrev || input[0];
     for (let i = 0; i < input.length; i++) {
-      const cur = input[i];
-      phase += 1;
+      const cur = input[i]; phase += 1;
       while (phase >= step) {
         phase -= step;
         const frac = 1 - phase / step;
@@ -436,26 +622,19 @@
       }
       prev = cur;
     }
-    S.resamplePhase = phase;
-    S.resamplePrev = prev;
+    S.resamplePhase = phase; S.resamplePrev = prev;
     return toInt16(out);
   }
   function toInt16(arr) {
     const out = new Int16Array(arr.length);
     for (let i = 0; i < arr.length; i++) {
-      let v = Math.max(-1, Math.min(1, arr[i]));
+      const v = Math.max(-1, Math.min(1, arr[i]));
       out[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
     }
     return out;
   }
 
-  function stopMic() {
-    if (S.proc) { try { S.proc.disconnect(); } catch(e){} S.proc.onaudioprocess = null; S.proc = null; }
-    if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
-    if (S.micCtx) { try { S.micCtx.close(); } catch(e){} S.micCtx = null; }
-  }
-
-  // ---------------------------------------------------------------- TTS output
+  // ---------------------------------------------------------------- audio out
   function ensurePlayCtx() {
     if (!S.playCtx) {
       S.playCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 24000});
@@ -464,243 +643,255 @@
     if (S.playCtx.state === "suspended") S.playCtx.resume();
     return S.playCtx;
   }
-
   function onAudio(buf) {
     const view = new Uint8Array(buf);
-    if (view.length < 3 || view[0] !== 1) return;
-    if (!S.play) { S.ttsFrames++; return; }
+    if (!S.started || view.length < 3 || view[0] !== 1) return;
+    if (!S.play) return;
     const ctx = ensurePlayCtx();
-    // Copy past the 1-byte frame tag: Int16Array needs an even byte offset.
     const pcmBytes = view.slice(1);
     const pcm = new Int16Array(pcmBytes.buffer, 0, pcmBytes.length >> 1);
     const audio = ctx.createBuffer(1, pcm.length, 24000);
     const ch = audio.getChannelData(0);
     for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
-    const src = ctx.createBufferSource();
-    src.buffer = audio;
-    src.connect(ctx.destination);
-    const start = Math.max(ctx.currentTime + 0.06, S.nextPlay || 0);
-    src.start(start);
-    S.nextPlay = start + audio.duration;
-    S.sources.push(src);
-    S.ttsFrames++;
+    const src = ctx.createBufferSource(); src.buffer = audio; src.connect(ctx.destination);
+    const start = Math.max(ctx.currentTime + 0.05, S.nextPlay || 0);
+    src.start(start); S.nextPlay = start + audio.duration; S.sources.push(src);
     src.onended = () => { S.sources = S.sources.filter(s => s !== src); };
   }
-
   function clearAudio() {
-    S.sources.forEach(s => { try { s.stop(); } catch(e){} });
-    S.sources = [];
-    S.nextPlay = 0;
-    S.echoMuted = false;
+    S.sources.forEach(s => { try { s.stop(); } catch (e) {} });
+    S.sources = []; S.nextPlay = 0; S.echoMuted = false;
   }
 
-  // ---------------------------------------------------------- audio simulation
+  // ---------------------------------------------------------------- simulation
   async function loadSamples() {
     try {
-      const res = await fetch("/api/samples");
-      const list = await res.json();
-      const sel = $("selSample");
-      sel.innerHTML = "";
+      const list = await (await fetch("/api/samples")).json();
+      const sel = $("selSample"); sel.innerHTML = "";
       for (const s of list) {
-        const opt = document.createElement("option");
-        opt.value = s.url;
-        opt.textContent = `${s.name} (${s.duration}s)`;
-        sel.appendChild(opt);
+        const o = document.createElement("option");
+        o.value = s.url; o.textContent = `${s.name} (${s.duration}s)`;
+        sel.appendChild(o);
       }
-      const preferred = list.find(x => x.name === "zh_30s.wav") || list.find(x => x.name === "vad_example.wav");
-      if (preferred) sel.value = preferred.url;
-      if (!list.length) {
-        const opt = document.createElement("option");
-        opt.textContent = "samples/ 下没有 WAV";
-        sel.appendChild(opt);
-      }
-    } catch (e) { log("读取样例列表失败：" + e.message); }
+      const pref = list.find(x => x.name === "vad_example.wav") || list.find(x => x.name === "zh_30s.wav") || list[0];
+      if (pref) sel.value = pref.url;
+      if (!list.length) { const o = document.createElement("option"); o.textContent = "samples/ 下没有 WAV"; sel.appendChild(o); }
+    } catch (e) { log("读取样例失败：" + e.message); }
   }
-
   async function decodeToPcm16k(url) {
     const buf = await (await fetch(url)).arrayBuffer();
     const tmp = new (window.AudioContext || window.webkitAudioContext)();
     const audio = await tmp.decodeAudioData(buf.slice(0));
     const frames = Math.max(1, Math.ceil(audio.duration * 16000));
     const off = new OfflineAudioContext(1, frames, 16000);
-    const src = off.createBufferSource();
-    src.buffer = audio;
-    src.connect(off.destination);
-    src.start();
+    const src = off.createBufferSource(); src.buffer = audio; src.connect(off.destination); src.start();
     const rendered = await off.startRendering();
     const f = rendered.getChannelData(0);
     const pcm = new Int16Array(f.length);
     for (let i = 0; i < f.length; i++) {
-      let v = Math.max(-1, Math.min(1, f[i]));
+      const v = Math.max(-1, Math.min(1, f[i]));
       pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
     }
     try { tmp.close(); } catch (e) {}
     return pcm;
   }
-
-  function clearSim() {
-    if (S.simTimer) { clearInterval(S.simTimer); S.simTimer = null; }
-    S.simActive = false;
-    S.simPcm = null;
-    S.simPos = 0;
-    S.simTail = 0;
-    $("btnSim").disabled = false;
-    $("btnSimStop").disabled = true;
+  function beginSession() {
+    send({type: "start"});
+    send({type: "set_asr_mode", value: $("selAsr").value});
+    send({type: "set_mt_backend", value: $("selMt").value});
+    send({type: "set_tts_enabled", value: $("selTts").value === "on"});
+    send({type: "set_tts_continuous", value: $("selTtsMode").value === "continuous"});
+    send({type: "set_tts_voice", value: $("selVoice").value});
+    send({type: "set_direction", direction: $("selDir").value});
   }
-
   async function startSim() {
-    if (!online()) { log("尚未连接服务器"); return; }
-    if (S.simActive) return;
-    ensurePlayCtx();
-    if (S.started) {
-      stopAll(true);
-      setTimeout(startSim, 400);
-      return;
-    }
+    if (!online()) { showWarn("尚未连接服务器，请等待重连。"); return; }
+    if (S.started) { stopAll(true); await sleep(350); }
     const url = $("selSample").value;
-    if (!url) { log("没有可用的样例音频"); return; }
-    $("btnSim").disabled = true;
+    if (!url) { showWarn("没有可用的样例音频。"); return; }
+    ensurePlayCtx();
+    $("btnSim").disabled = true; $("btnStart").disabled = true;
     $("simHint").textContent = "解码音频…";
     let pcm;
-    try {
-      pcm = await decodeToPcm16k(url);
-    } catch (e) {
-      log("解码失败：" + e.message);
-      $("btnSim").disabled = false;
+    try { pcm = await decodeToPcm16k(url); }
+    catch (e) {
+      showWarn("WAV 解码失败：" + (e.message || e));
+      $("btnSim").disabled = false; $("btnStart").disabled = false;
       $("simHint").textContent = "解码失败";
       return;
     }
-    send({type: "start"});
-    // WAV simulation is not a microphone; the server-side echo gate would
-    // zero parts of the simulated stream while TTS is playing.
+    if (!online()) {
+      showWarn("连接已断开，请等待重连。");
+      $("btnSim").disabled = false; $("btnStart").disabled = false;
+      return;
+    }
+    ensurePlayCtx();
+    beginSession();
     send({type: "set_echo_guard", value: false});
-    send({type: "set_barge_in", value: $("chkBarge").checked});
-    S.started = true;
-    $("btnStart").disabled = true;
-    $("btnStop").disabled = false;
-    $("btnSimStop").disabled = false;
-    S.simPcm = pcm;
-    S.simPos = 0;
-    S.simTail = 60;          // 1.2 s of silence closes the last utterance
-    S.simActive = true;
-    $("simHint").textContent = `模拟中：${(pcm.length / 16000).toFixed(1)} s`;
-    log(`开始模拟麦克风：${url}（${(pcm.length / 16000).toFixed(1)} s）`);
-    const CHUNK = 320;       // 20 ms @ 16 kHz
-    S.simTimer = setInterval(() => {
-      if (!S.simActive || !online()) return;
-      if (S.ws.bufferedAmount > 512 * 1024) return;  // don't flood a slow link
-      if (S.simPos < S.simPcm.length) {
-        const end = Math.min(S.simPos + CHUNK, S.simPcm.length);
-        S.ws.send(S.simPcm.slice(S.simPos, end).buffer);
-        S.simPos = end;
-      } else if (S.simTail > 0) {
-        S.ws.send(new Int16Array(CHUNK).buffer);
-        S.simTail--;
-      } else if ($("chkSimLoop").checked) {
-        S.simPos = 0;
-        S.simTail = 60;       // pause between loops so the last turn closes
-        $("simHint").textContent = "循环模拟中…";
-      } else {
-        clearInterval(S.simTimer);
-        S.simTimer = null;
-        S.simActive = false;
-        $("btnSim").disabled = false;
-        $("simHint").textContent = "模拟播放结束；可勾选“循环”持续测试";
-        log("模拟音频发送完毕，等待最后一段翻译/译音");
-      }
-    }, 20);
+    S.started = true; S.simActive = true; S.simPcm = pcm; S.simPos = 0; S.simTail = 0;
+    $("btnStart").disabled = true; $("btnStop").disabled = false; $("btnSimStop").disabled = false;
+    $("simHint").textContent = "模拟播放中…";
+    setHint("WAV 模拟中…");
+    log("开始模拟：" + url);
+    S.simTimer = setInterval(simTick, 20);
+  }
+  function simTick() {
+    if (!S.simPcm) return;
+    const step = 320; // 20 ms @ 16 kHz
+    if (S.simPos < S.simPcm.length) {
+      const chunk = S.simPcm.subarray(S.simPos, Math.min(S.simPos + step, S.simPcm.length));
+      if (online()) S.ws.send(chunk.slice().buffer);
+      S.simPos += step;
+      return;
+    }
+    if (S.simTail < 70) {
+      if (online()) S.ws.send(new Int16Array(step).buffer);
+      S.simTail++;
+      return;
+    }
+    clearInterval(S.simTimer); S.simTimer = null;
+    S.simActive = false;
+    $("btnSim").disabled = false; $("btnSimStop").disabled = true;
+    $("simHint").textContent = "模拟播放结束，等待最后一段翻译/译音";
+    log("模拟音频发送完毕");
+    if ($("chkLoop").checked) {
+      S.simPos = 0; S.simTail = 0; S.simActive = true;
+      $("btnSimStop").disabled = false; $("simHint").textContent = "循环模拟中…";
+      S.simTimer = setInterval(simTick, 20);
+    } else {
+      setHint("模拟结束");
+    }
+  }
+  function stopSim(sendStop = true) {
+    if (S.simTimer) { clearInterval(S.simTimer); S.simTimer = null; }
+    S.simActive = false; S.simPcm = null; S.simPos = 0; S.simTail = 0;
+    $("btnSim").disabled = false; $("btnSimStop").disabled = true;
+    $("simHint").textContent = "WAV 模拟已停止";
+    if (sendStop) stopAll(true);
   }
 
-  function stopSim(sendStop = true) {
-    clearSim();
-    if (S.started) {
-      if (sendStop && online()) send({type: "stop"});
-      S.started = false;
-      stopMic();
-      clearAudio();
-      $("btnStart").disabled = false;
-      $("btnStop").disabled = true;
+  // ---------------------------------------------------------------- voice upload
+  function startVoicePoll() {
+    if (S.voicePoll) return;
+    const tick = async () => {
+      try {
+        const st = await (await fetch("/health", {cache: "no-store"})).json();
+        applyStatus(st);
+        if (!st.tts_custom_loading) {
+          clearInterval(S.voicePoll); S.voicePoll = null;
+          if (st.tts_custom) {
+            $("voiceHint").textContent = "自定义参考音已就绪：" +
+              (st.tts_custom_name || "reference.wav");
+          } else if (st.tts_custom_error) {
+            showWarn("参考音色加载失败：" + st.tts_custom_error);
+          }
+        }
+      } catch (e) {}
+    };
+    tick();
+    S.voicePoll = setInterval(tick, 1000);
+  }
+
+  async function uploadVoice() {
+    const file = $("voiceFile").files[0];
+    const text = $("voiceText").value.trim();
+    if (!file) { showWarn("请选择参考音 WAV 文件。"); return; }
+    if (!text) { showWarn("请填写参考音频对应文字，否则克隆会不准。"); return; }
+    if (S.started) { showWarn("请先停止当前会话，再上传参考音。"); return; }
+    if (!online()) { showWarn("尚未连接服务器，请等待重连。"); return; }
+    $("btnVoiceUpload").disabled = true;
+    $("voiceHint").textContent = "上传中…";
+    try {
+      const body = await file.arrayBuffer();
+      const url = "/api/voice?name=" + encodeURIComponent(file.name) +
+                  "&text=" + encodeURIComponent(text);
+      const r = await fetch(url, {method: "POST",
+        headers: {"Content-Type": "audio/wav"}, body});
+      let j = {};
+      try { j = await r.json(); } catch (e) {}
+      if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+      $("voiceHint").textContent = "上传成功，正在加载参考音色（约 20 秒）…";
+      startVoicePoll();
+    } catch (e) {
+      showWarn("参考音上传失败：" + (e.message || e));
+      $("voiceHint").textContent = "上传失败";
+      $("btnVoiceUpload").disabled = false;
     }
-    $("simHint").textContent = "已停止模拟";
   }
 
   // ---------------------------------------------------------------- controls
   async function startAll() {
     try {
-      if (!online()) { log("尚未连接服务器"); return; }
-      if (S.simActive) { stopSim(true); await new Promise(r => setTimeout(r, 350)); }
+      if (!online()) { showWarn("尚未连接服务器，请等待重连。"); return; }
+      $("btnStart").disabled = true; $("btnSim").disabled = true;
+      if (S.simTimer) stopSim(true);
+      if (S.started) { stopAll(true); await sleep(300); }
+      $("btnStart").disabled = true;
       ensurePlayCtx();
       if (!S.stream) await startMic();
-      send({type:"start"});
-      send({type:"set_echo_guard", value: S.echoGuard});
-      send({type:"set_direction", direction: $("selDir").value});
-      send({type:"set_barge_in", value: $("chkBarge").checked});
+      if (!online()) {
+        stopMic();
+        $("btnStart").disabled = false; $("btnSim").disabled = false;
+        showWarn("连接已断开，请等待重连。");
+        return;
+      }
+      beginSession();
+      send({type: "set_echo_guard", value: S.echo});
       S.started = true;
-      $("btnStart").disabled = true;
-      $("btnStop").disabled = false;
+      $("btnStart").disabled = true; $("btnStop").disabled = false;
+      $("btnSim").disabled = false;
       setHint("正在听…");
       log("开始采集");
     } catch (e) {
-      log("启动失败：" + e.message);
-      $("warnbox").textContent = "麦克风启动失败：" + e.message;
-      $("warnbox").classList.add("show");
+      stopMic();
+      $("btnStart").disabled = false; $("btnSim").disabled = false;
+      showWarn("麦克风启动失败：" + (e.message || e));
+      $("live").classList.remove("show");
+      setHint("点击开始并允许麦克风");
     }
   }
-
-  function stopAll(sendStop=true) {
-    clearSim();
-    S.started = false;
-    if (sendStop && online()) send({type:"stop"});
-    stopMic();
-    clearAudio();
-    $("btnStart").disabled = false;
-    $("btnStop").disabled = true;
+  function stopAll(sendStop = true) {
+    if (S.simTimer) { clearInterval(S.simTimer); S.simTimer = null; }
+    S.simActive = false; S.simPcm = null;
+    S.started = false; S.speaking = false;
+    if (sendStop && online()) send({type: "stop"});
+    stopMic(); clearAudio();
+    $("btnStart").disabled = false; $("btnStop").disabled = true;
+    $("btnSim").disabled = false; $("btnSimStop").disabled = true;
+    $("btnVoiceUpload").disabled = !!S.voicePoll;
+    $("live").classList.remove("show"); $("liveDot").classList.remove("on");
     setHint("已停止");
     log("停止采集");
   }
+  function updateWarn() {
+    const insecure = !window.isSecureContext && !["localhost", "127.0.0.1"].includes(location.hostname);
+    if (!insecure) { $("warn").classList.remove("show"); return; }
+    const port = S.tlsPort || 8445;
+    $("warn").innerHTML = `当前是 HTTP，浏览器会禁用麦克风。可打开 <a href="https://${location.hostname}:${port}/">HTTPS 入口</a>（接受自签名证书），或使用 WAV 模拟。`;
+    $("warn").classList.add("show");
+  }
 
+  // Browser form-state restore can change checkboxes before the handlers run.
+  S.play = $("chkPlay").checked;
+  S.echo = $("chkEcho").checked;
   $("btnStart").onclick = startAll;
   $("btnStop").onclick = () => stopAll(true);
+  $("btnVoiceUpload").onclick = uploadVoice;
   $("btnSim").onclick = startSim;
   $("btnSimStop").onclick = () => stopSim(true);
-  $("selDir").onchange = () => send({type:"set_direction", direction:$("selDir").value});
-  $("selMt").onchange = () => send({type:"set_mt_backend", value:$("selMt").value});
+  $("selAsr").onchange = () => send({type: "set_asr_mode", value: $("selAsr").value});
+  $("selMt").onchange = () => send({type: "set_mt_backend", value: $("selMt").value});
+  $("selTts").onchange = () => send({type: "set_tts_enabled", value: $("selTts").value === "on"});
+  $("selTtsMode").onchange = () => send({type: "set_tts_continuous", value: $("selTtsMode").value === "continuous"});
+  $("selVoice").onchange = () => send({type: "set_tts_voice", value: $("selVoice").value});
+  $("selDir").onchange = () => send({type: "set_direction", direction: $("selDir").value});
   $("chkPlay").onchange = () => { S.play = $("chkPlay").checked; if (!S.play) clearAudio(); };
   $("chkEcho").onchange = () => {
-    S.echoGuard = $("chkEcho").checked;
-    if (!S.echoGuard) S.echoMuted = false;
-    send({type:"set_echo_guard", value: S.echoGuard});
-    log(S.echoGuard ? "防回声已开启：播放译音时麦克风静音" : "防回声已关闭（请使用耳机）");
+    S.echo = $("chkEcho").checked; if (!S.echo) S.echoMuted = false;
+    send({type: "set_echo_guard", value: S.echo});
+    log(S.echo ? "防回声已开启" : "防回声已关闭（请使用耳机）");
   };
-  $("chkBarge").onchange = () => send({type:"set_barge_in", value: $("chkBarge").checked});
-  $("chkPtt").onchange = () => {
-    S.pttMode = $("chkPtt").checked;
-    $("btnPtt").style.display = S.pttMode ? "" : "none";
-    if (!S.pttMode) S.pttDown = false;
-    $("btnPtt").classList.remove("active");
-  };
-  $("btnPtt").style.display = "none";
-  const pttDown = (e) => { e.preventDefault(); S.pttDown = true; $("btnPtt").classList.add("active"); send({type:"cancel_tts"}); };
-  const pttUp = (e) => { e.preventDefault(); S.pttDown = false; $("btnPtt").classList.remove("active"); };
-  $("btnPtt").addEventListener("pointerdown", pttDown);
-  $("btnPtt").addEventListener("pointerup", pttUp);
-  $("btnPtt").addEventListener("pointerleave", pttUp);
-
-  // latency ticker: show segment -> first audio once all stages are known
-  setInterval(() => {
-    // no-op placeholder: metrics are updated by events
-  }, 500);
-
-  if (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(location.hostname)) {
-    const b = $("warnbox");
-    b.innerHTML = '当前是 HTTP，浏览器会禁用麦克风。请打开 <a style="color:#ffd28a" href="https://'
-      + location.hostname + ':8444/">HTTPS 入口</a>（接受自签名证书），'
-      + '或使用 Chrome 的 insecure-origin 启动参数。';
-    b.classList.add("show");
-  }
-  loadSamples();
-  connect();
-  log("页面就绪");
+  connect(); loadSamples(); updateWarn();
 })();
 </script>
 </body>

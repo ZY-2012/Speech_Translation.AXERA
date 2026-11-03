@@ -15,6 +15,7 @@ class TtsJob:
     last: bool
     epoch: int
     t_submit: float
+    target: str = "en"
 
 
 class TtsService:
@@ -48,11 +49,13 @@ class TtsService:
     def active(self) -> bool:
         return bool(self._started)
 
-    def submit(self, text: str, uid: int, last: bool = False) -> bool:
+    def submit(self, text: str, uid: int, last: bool = False,
+               target: str = "en") -> bool:
         if self._closed:
             return False
         job = TtsJob(text=text or "", uid=uid, last=last,
-                     epoch=self._epoch, t_submit=time.monotonic())
+                     epoch=self._epoch, t_submit=time.monotonic(),
+                     target=target)
         try:
             self._q.put(job, timeout=5.0)
             return True
@@ -121,7 +124,8 @@ class TtsService:
             try:
                 for pcm in self.synth_fn(
                         job.text,
-                        lambda: job.epoch != self._epoch or self._stop.is_set()):
+                        lambda: job.epoch != self._epoch or self._stop.is_set(),
+                        job.target):
                     if job.epoch != self._epoch or self._stop.is_set():
                         cancelled = True
                         break

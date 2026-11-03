@@ -10,7 +10,6 @@ import os
 import struct
 import subprocess
 import threading
-import time
 from pathlib import Path
 
 

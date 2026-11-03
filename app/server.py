@@ -8,16 +8,18 @@ then open http://<board-ip>:8096/.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import mimetypes
-import os
+import re
 import signal
 import sys
 import threading
 import traceback
+import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -38,16 +40,31 @@ STATE = {
 
 def _status():
     c = STATE["components"]
+    cfg = STATE.get("cfg") or {}
     return {
         "mock": STATE["mock"],
+        "direction": cfg.get("llm", {}).get("direction", "auto"),
+        "barge_in": bool(cfg.get("runtime", {}).get("barge_in", False)),
         "asr_stream": bool(c.asr_stream and c.asr_stream.ready()) if c else False,
         "asr_offline": bool(c.asr and c.asr.ready()) if c else False,
+        "asr_mode": getattr(c, "asr_mode", "hybrid") if c else "hybrid",
+        "tts_enabled": bool(getattr(c, "tts_enabled", True)) if c else True,
+        "tts_continuous": bool(getattr(c, "tts_continuous", True)) if c else True,
+        "tts_voice": getattr(c, "tts_voice", "auto") if c else "auto",
         "llm": bool(c.llm and c.llm.ready()) if c else False,
         "mt_backend": getattr(c, "mt_backend", None) if c else None,
         "qwen": bool(c.llm_qwen and c.llm_qwen.ready()) if c else False,
         "opus": bool(c.llm_opus and c.llm_opus.ready()) if c else False,
-        "tts": bool(c.tts and (c.tts.ready() if callable(c.tts.ready) else c.tts.ready)) if c else False,
+        "tts": bool(c and ((c.tts and c.tts.ready()) or
+                           (getattr(c, "tts_zh", None) and c.tts_zh.ready()) or
+                           (getattr(c, "tts_custom", None) and c.tts_custom.ready()))),
+        "tts_zh": bool(getattr(c, "tts_zh", None) and c.tts_zh.ready()) if c else False,
+        "tts_custom": bool(getattr(c, "tts_custom", None) and c.tts_custom.ready()) if c else False,
+        "tts_custom_loading": bool(getattr(c, "tts_custom_loading", False)) if c else False,
+        "tts_custom_error": getattr(c, "tts_custom_error", "") if c else "",
+        "tts_custom_name": getattr(c, "tts_custom_name", "") if c else "",
         "session": bool(STATE["session"]),
+        "tls_port": int(STATE.get("tls_port", 0)),
     }
 
 
@@ -92,6 +109,78 @@ class Handler(BaseHTTPRequestHandler):
             self._serve(target)
             return
         self.send_error(404)
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path != "/api/voice":
+            self.send_error(404)
+            return
+        c = STATE["components"]
+        if c is None:
+            self.close_connection = True
+            self._json({"ok": False, "error": "components not ready"}, 503)
+            return
+        with STATE["lock"]:
+            if STATE["session"] is not None:
+                self.close_connection = True
+                self._json({"ok": False, "error": "stop the active session first"}, 409)
+                return
+        if getattr(c, "tts_custom_loading", False):
+            self.close_connection = True
+            self._json({"ok": False, "error": "voice is already loading"}, 409)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > 20 * 1024 * 1024:
+            self.close_connection = True
+            self._json({"ok": False, "error": "WAV must be 1-20 MB"}, 400)
+            return
+        body = self.rfile.read(length)
+        qs = parse_qs(parsed.query)
+        text = (qs.get("text", [""])[0] or "").strip()
+        text = " ".join(text.split())
+        name = (qs.get("name", ["reference.wav"])[0] or "reference.wav").strip()
+        name = re.sub(r"[^\w.\-]+", "_", name)[:80] or "reference.wav"
+        if not text or len(text) > 120:
+            self._json({"ok": False, "error": "reference text is required (1-120 chars)"}, 400)
+            return
+        try:
+            with wave.open(io.BytesIO(body), "rb") as wf:
+                channels = wf.getnchannels()
+                width = wf.getsampwidth()
+                rate = wf.getframerate()
+                frames = wf.getnframes()
+            duration = frames / float(rate or 1)
+        except Exception:
+            self._json({"ok": False, "error": "invalid WAV file"}, 400)
+            return
+        if channels not in (1, 2):
+            self._json({"ok": False, "error": "WAV must be mono or stereo"}, 400)
+            return
+        if width not in (2, 4):
+            self._json({"ok": False, "error": "WAV must be 16-bit or 32-bit"}, 400)
+            return
+        if not (3.0 <= duration <= 5.0):
+            self._json({"ok": False, "error": "reference WAV must be 3-5 seconds"}, 400)
+            return
+        out_dir = ROOT / ".work" / "voices"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out = out_dir / "custom.wav"
+        try:
+            out.write_bytes(body)
+        except Exception:
+            traceback.print_exc()
+            self._json({"ok": False, "error": "cannot save reference WAV"}, 500)
+            return
+        result = c.load_custom_voice(out, text, name)
+        if not result.get("ok"):
+            self._json(result, 409)
+            return
+        result.update({"duration": round(duration, 2), "rate": rate,
+                       "channels": channels})
+        self._json(result)
 
     @staticmethod
     def _samples():
@@ -182,6 +271,9 @@ class Handler(BaseHTTPRequestHandler):
                         if STATE["session"] is not None:
                             ws.send_json({"type": "error", "message": "busy"})
                             continue
+                        if getattr(STATE["components"], "tts_custom_loading", False):
+                            ws.send_json({"type": "error", "message": "voice loading"})
+                            continue
                         session = Session(cfg, STATE["components"],
                                           send_event=safe_event,
                                           send_audio=safe_audio,
@@ -217,6 +309,30 @@ class Handler(BaseHTTPRequestHandler):
                     c = STATE["components"]
                     backend = c.set_mt_backend(msg.get("value", "opus"))
                     ws.send_json({"type": "mt_backend", "value": backend,
+                                  "status": _status()})
+                elif cmd == "set_asr_mode":
+                    c = STATE["components"]
+                    mode = c.set_asr_mode(msg.get("value", "hybrid"))
+                    ws.send_json({"type": "asr_mode", "value": mode,
+                                  "status": _status()})
+                elif cmd == "set_tts_enabled":
+                    c = STATE["components"]
+                    enabled = bool(msg.get("value", True))
+                    c.set_tts_enabled(enabled)
+                    if not enabled and session is not None:
+                        session.cancel_tts()
+                    ws.send_json({"type": "tts_enabled", "value": enabled,
+                                  "status": _status()})
+                elif cmd == "set_tts_continuous":
+                    c = STATE["components"]
+                    value = bool(msg.get("value", True))
+                    c.set_tts_continuous(value)
+                    ws.send_json({"type": "tts_continuous", "value": value,
+                                  "status": _status()})
+                elif cmd == "set_tts_voice":
+                    c = STATE["components"]
+                    voice = c.set_tts_voice(msg.get("value", "auto"))
+                    ws.send_json({"type": "tts_voice", "value": voice,
                                   "status": _status()})
         except WsClosed:
             pass

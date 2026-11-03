@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 import ctypes
-import math
 import os
 from collections import deque
-from pathlib import Path
 
 import numpy as np
 
@@ -191,3 +189,8 @@ class Segmenter:
     @property
     def in_speech(self) -> bool:
         return self._in_speech
+
+    @property
+    def speech_ms(self) -> float:
+        """Voiced duration of the current segment (excludes pre-roll)."""
+        return self._voiced_hops * self.hop * 1000.0 / self.rate

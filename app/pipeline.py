@@ -15,6 +15,7 @@ import re
 import threading
 import time
 import traceback
+from pathlib import Path
 
 import numpy as np
 
@@ -22,6 +23,7 @@ from .asr_offline import OfflineAsr
 from .asr_stream import StreamAsr
 from .clauses import ClauseSplitter, meaningful
 from .llm_axllm import AxLlmTranslator
+from .number_text import normalize_numbers
 from .opus_mt import OpusMtTranslator
 from .tts_service import TtsService
 from .tts_zipvoice import FRAME as TTS_FRAME
@@ -30,6 +32,11 @@ from .tts_zipvoice import ZipVoiceTts
 from .vad_ten import Segmenter, make_vad
 
 SRC_PUNCT = "。！？!?；;，,"
+_FILLER_CHARS = set("嗯啊呃哦唉诶额唔哈呀")
+
+
+def _filler_only(clean: str) -> bool:
+    return bool(clean) and all(ch in _FILLER_CHARS for ch in clean)
 
 
 def split_source(text: str) -> list[str]:
@@ -82,18 +89,6 @@ def split_source(text: str) -> list[str]:
     return out
 
 
-def _merge_sentence_text(a: str, b: str) -> str:
-    a = (a or "").strip()
-    b = (b or "").strip()
-    if not a:
-        return b
-    if not b:
-        return a
-    if a[-1] in "。！？!?":
-        a = a[:-1] + "，"
-    return a + b
-
-
 class Components:
     def __init__(self, cfg: dict, mock: bool = False):
         self.cfg = cfg
@@ -103,6 +98,28 @@ class Components:
         if not mock and cfg["asr"].get("stream_enabled", False):
             self.asr_stream = StreamAsr(cfg)
         self.tts = None if mock else ZipVoiceTts(cfg)
+        self.tts_zh = None
+        if not mock and cfg["tts"].get("zh_prompt_wav"):
+            # A separate resident worker keeps the Chinese reference timbre
+            # for EN->ZH while the default worker handles ZH->EN.
+            cfg_zh = dict(cfg)
+            cfg_zh["tts"] = dict(cfg["tts"])
+            cfg_zh["tts"]["prompt_wav"] = cfg["tts"]["zh_prompt_wav"]
+            cfg_zh["tts"]["prompt_text"] = cfg["tts"].get("zh_prompt_text", "")
+            cfg_zh["tts"]["warmup_text"] = cfg["tts"].get(
+                "zh_warmup_text", "你好，这是一个测试。")
+            cfg_zh["tts"]["tmp_dir"] = cfg["tts"].get(
+                "zh_tmp_dir", ".work/zipvoice-tmp-zh")
+            self.tts_zh = ZipVoiceTts(cfg_zh)
+        self.tts_custom = None
+        self.tts_custom_loading = False
+        self.tts_custom_error = ""
+        self.tts_custom_name = ""
+        self._voice_lock = threading.Lock()
+        self.asr_mode = cfg["asr"].get("mode", "hybrid")
+        self.tts_enabled = bool(cfg["tts"].get("enabled", True))
+        self.tts_continuous = bool(cfg["tts"].get("continuous", True))
+        self.tts_voice = cfg["tts"].get("voice", "auto")
         self.llm_qwen = None
         self.llm_opus = None
         self.llm = None
@@ -114,7 +131,11 @@ class Components:
             self.set_mt_backend(cfg["llm"].get("backend", "opus"))
 
     def set_mt_backend(self, backend: str) -> str:
-        backend = "qwen" if backend == "qwen" else "opus"
+        backend = backend if backend in ("qwen", "opus", "none") else "opus"
+        if backend == "none":
+            self.mt_backend = "none"
+            self.llm = None
+            return self.mt_backend
         obj = self.llm_qwen if backend == "qwen" else self.llm_opus
         if obj is None:
             obj = self.llm_opus if backend == "qwen" else self.llm_qwen
@@ -122,6 +143,90 @@ class Components:
         self.mt_backend = backend
         self.llm = obj
         return self.mt_backend
+
+    def set_asr_mode(self, mode: str) -> str:
+        self.asr_mode = "offline" if mode == "offline" else "hybrid"
+        return self.asr_mode
+
+    def set_tts_enabled(self, enabled: bool):
+        self.tts_enabled = bool(enabled)
+
+    def set_tts_continuous(self, enabled: bool):
+        self.tts_continuous = bool(enabled)
+
+    def set_tts_voice(self, voice: str) -> str:
+        if voice == "custom" and self.tts_custom is None:
+            voice = "auto"
+        self.tts_voice = voice if voice in ("en", "zh", "custom") else "auto"
+        return self.tts_voice
+
+    def tts_for(self, target: str):
+        if self.tts_voice == "custom" and self.tts_custom is not None:
+            return self.tts_custom
+        if self.tts_voice == "zh" and self.tts_zh is not None:
+            return self.tts_zh
+        if self.tts_voice == "en" and self.tts is not None:
+            return self.tts
+        if target == "zh" and self.tts_zh is not None:
+            return self.tts_zh
+        return self.tts or self.tts_zh
+
+    def load_custom_voice(self, wav_path: Path, prompt_text: str,
+                          name: str = "") -> dict:
+        with self._voice_lock:
+            if self.tts_custom_loading:
+                return {"ok": False, "error": "voice is already loading"}
+            self.tts_custom_loading = True
+            self.tts_custom_error = ""
+            self.tts_custom_name = name or wav_path.name
+        th = threading.Thread(target=self._load_custom_voice,
+                              args=(wav_path, prompt_text),
+                              daemon=True, name="tts-custom-load")
+        th.start()
+        return {"ok": True, "loading": True, "name": self.tts_custom_name}
+
+    def _load_custom_voice(self, wav_path: Path, prompt_text: str):
+        cfg = dict(self.cfg)
+        cfg["tts"] = dict(self.cfg["tts"])
+        cfg["tts"]["prompt_wav"] = str(wav_path)
+        cfg["tts"]["prompt_text"] = prompt_text
+        cfg["tts"]["tmp_dir"] = ".work/zipvoice-tmp-custom"
+        cfg["tts"]["warmup_text"] = (
+            "你好，这是一个测试。"
+            if re.search(r"[\u4e00-\u9fff]", prompt_text)
+            else "Hello, this is a test.")
+        engine = None
+        try:
+            engine = ZipVoiceTts(cfg)
+            engine.load()
+            t0 = time.time()
+            engine.warmup()
+            print(f"[tts-custom] warmup {time.time() - t0:.1f}s", flush=True)
+        except Exception:
+            traceback.print_exc()
+            if engine is not None:
+                try:
+                    engine.close()
+                except Exception:
+                    pass
+            with self._voice_lock:
+                self.tts_custom_loading = False
+                self.tts_custom_error = "reference voice load failed"
+            return
+        old = None
+        with self._voice_lock:
+            old = self.tts_custom
+            self.tts_custom = engine
+            self.tts_custom_loading = False
+            self.tts_custom_error = ""
+            self.tts_voice = "custom"
+        if old is not None:
+            try:
+                old.close()
+            except Exception:
+                pass
+        print(f"[tts-custom] ready name={self.tts_custom_name!r}",
+              flush=True)
 
     def preload(self):
         if self.mock:
@@ -156,19 +261,26 @@ class Components:
             except Exception:
                 traceback.print_exc()
                 self.asr = None
-        if self.tts is not None:
+        for name, obj in (("en", self.tts), ("zh", self.tts_zh)):
+            if obj is None:
+                continue
             try:
-                self.tts.load()
+                obj.load()
                 t0 = time.time()
-                self.tts.warmup()
-                print(f"[tts] warmup {time.time() - t0:.1f}s", flush=True)
+                obj.warmup()
+                print(f"[tts-{name}] warmup {time.time() - t0:.1f}s",
+                      flush=True)
             except Exception:
                 traceback.print_exc()
-                self.tts = None
+                if name == "zh":
+                    self.tts_zh = None
+                else:
+                    self.tts = None
 
     def close(self):
         seen = set()
-        for obj in (self.asr_stream, self.asr, self.llm_qwen, self.llm_opus, self.tts):
+        for obj in (self.asr_stream, self.asr, self.llm_qwen, self.llm_opus,
+                    self.tts, self.tts_zh, self.tts_custom):
             if obj is None or id(obj) in seen:
                 continue
             seen.add(id(obj))
@@ -243,11 +355,12 @@ class Session:
         self.started = True
         self._t0 = time.monotonic()
 
-        def synth(text, cancelled):
-            if self.c.tts is None:
+        def synth(text, cancelled, target):
+            engine = self.c.tts_for(target)
+            if engine is None:
                 yield from self._mock_tts(text)
             else:
-                yield from self.c.tts.stream(text, cancelled=cancelled)
+                yield from engine.stream(text, cancelled=cancelled)
 
         if self.c.asr_stream is not None:
             self.c.asr_stream.on_partial = self._on_asr_partial
@@ -297,13 +410,21 @@ class Session:
         if pcm.size:
             if self.echo_guard and time.monotonic() < self._tts_mute_until:
                 pcm = np.zeros_like(pcm)
-            if self.c.asr_stream is not None:
+            if self.c.asr_stream is not None and self.c.asr_mode != "offline":
                 self.c.asr_stream.feed(pcm.tobytes())
             self._fed_samples += pcm.size
             self.segmenter.push(pcm)
 
     def _on_asr_partial(self, text: str):
-        if not self.started:
+        if not self.started or not meaningful(text):
+            return
+        # The stream worker keeps running on room noise.  Only show partials
+        # once VAD has accumulated real speech; otherwise "嗯"/"我" flashes
+        # before the user starts talking.
+        if not self.segmenter.in_speech or self.segmenter.speech_ms < 600:
+            return
+        clean = re.sub(r"[\s\W_]", "", text or "")
+        if len(clean) < 3 or _filler_only(clean):
             return
         self._emit("asr_partial", text=text or "")
 
@@ -330,17 +451,31 @@ class Session:
             self._emit("speech_skipped", segment=uid, seconds=round(seconds, 2),
                        reason="too_short")
             return
+        # SenseVoice can hallucinate full sentences from very low-level room
+        # noise.  Reject segments whose RMS is below the configured floor.
+        if segment.size:
+            x = segment.astype(np.float32) / 32768.0
+            rms = float(np.sqrt(np.mean(x * x)))
+        else:
+            rms = 0.0
+        min_rms = float(self.cfg["audio"].get("min_rms", 0.003))
+        if rms < min_rms:
+            self._emit("speech_skipped", segment=uid, seconds=round(seconds, 2),
+                       reason="low_level")
+            return
         self._asr_q.put({"uid": uid, "pcm": segment.tobytes(),
                          "audio_s": seconds, "end_at": self._seg_end_at[uid]})
 
     # ------------------------------------------------------------------ asr
     def _asr_loop(self):
-        """Audio-level utterance buffer.
+        """Finalize each VAD utterance with streaming + offline SenseVoice.
 
-        Do not run ASR on every 0.5 s VAD fragment.  Keep the PCM of adjacent
-        fragments and run AX_ASR_RunPCM once, after the utterance endpoint.
-        This preserves acoustic context and avoids truncated fragments such as
-        "试错的过程很简" or "专门的活动".
+        The resident stream worker keeps cross-fragment context and emits
+        partials while speech is ongoing.  At the endpoint, flush the stream
+        and run AX_ASR_RunPCM on the full utterance; prefer the offline text
+        for punctuation/homophones, falling back to the stream only if the
+        offline text looks truncated.  ``sentence_merge_ms`` > 0 still merges
+        adjacent PCM fragments first.
         """
         merge_s = float(self.cfg["audio"].get("sentence_merge_ms", 800)) / 1000.0
         pending: dict | None = None
@@ -360,17 +495,25 @@ class Session:
                     text = self._mock_texts[self._mock_idx % len(self._mock_texts)]
                     self._mock_idx += 1
                 else:
-                    if self.c.asr_stream is not None:
+                    if self.c.asr_stream is not None and self.c.asr_mode != "offline":
                         stream_text = self.c.asr_stream.flush()
                     if self.c.asr is not None:
                         offline_text = self.c.asr.run(pcm)
                     # Streaming SenseVoice keeps cross-fragment context; the
                     # offline segment is used when it is complete enough to
                     # supply punctuation/better homophones.
-                    import re as _re
-                    sk = lambda x: _re.sub(r"[\s\W_]", "", x or "")
+                    sk = lambda x: re.sub(r"[\s\W_]", "", x or "")
                     if offline_text and stream_text:
-                        text = offline_text if len(sk(offline_text)) >= len(sk(stream_text)) else stream_text
+                        # Keep the previous "longer text wins" behaviour for
+                        # unpunctuated output; additionally prefer the offline
+                        # pass when it has punctuation and is not missing a
+                        # large tail.  This keeps live recognition stable while
+                        # still getting offline punctuation/refinement.
+                        o_len, s_len = len(sk(offline_text)), len(sk(stream_text))
+                        has_punct = bool(re.search(r"[。！？!?；;，,]", offline_text))
+                        text = (offline_text if (o_len >= s_len or
+                                                 (has_punct and o_len >= s_len * 0.75))
+                                else stream_text)
                     else:
                         text = offline_text or stream_text
             except Exception:
@@ -379,9 +522,27 @@ class Session:
                 return
             asr_ms = (time.monotonic() - t_asr) * 1000
             text = (text or "").strip()
-            if not text:
+            # Drop noise and VAD fragments.  A complete Chinese utterance
+            # normally gets terminal punctuation from the offline pass; a
+            # short unpunctuated result is usually a clipped fragment or a
+            # nearby speaker's partial sentence.
+            clean = re.sub(r"[\s\W_]", "", text or "")
+            min_chars = max(1, int(self.cfg["asr"].get("min_text_chars", 2)))
+            drop_short = max(0, int(self.cfg["asr"].get(
+                "drop_unpunctuated_chars", 12)))
+            has_cjk = bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+            terminal = bool(re.search(r"[。！？!?]", text or ""))
+            if (not clean or len(clean) < min_chars or _filler_only(clean) or
+                    (has_cjk and drop_short and len(clean) <= drop_short
+                     and not terminal)):
                 self._emit("asr_empty", uid=p["uid"])
                 return
+            # Keep Arabic numerals out of both the transcript and MT input.
+            # Normalize with the source language inferred from the target.
+            target_lang = AxLlmTranslator.detect_target(
+                text, self.cfg["llm"].get("direction", "auto"))
+            src_lang = "zh" if target_lang == "en" else "en"
+            text = normalize_numbers(text, src_lang)
             total_ms = (time.monotonic() - p["first_end"]) * 1000
             self._emit("asr_final", uid=p["uid"], text=text,
                        audio_s=round(p["audio_s"], 2),
@@ -414,12 +575,12 @@ class Session:
         self._emit("asr_worker_stopped")
 
     # ------------------------------------------------------------------ mt/tts
-    def _submit_clause(self, uid: int, text: str) -> bool:
-        if self._tts is None or not self.cfg["tts"].get("enabled", True):
+    def _submit_clause(self, uid: int, text: str, target: str) -> bool:
+        if self._tts is None or not self.c.tts_enabled:
             return False
         if not meaningful(text):
             return False
-        return self._tts.submit(text, uid, last=False)
+        return self._tts.submit(text, uid, last=False, target=target)
 
     def _mt_loop(self):
         while True:
@@ -439,6 +600,10 @@ class Session:
             return
         cfg = self.cfg
         target = AxLlmTranslator.detect_target(source, cfg["llm"].get("direction", "auto"))
+        # Continuous mode synthesises the complete translation in one
+        # ZipVoice request.  This removes the ~1.4 s first-frame gap between
+        # target clauses and is much smoother for long WAV/live utterances.
+        continuous = bool(self.c.tts_continuous)
         self._emit("translate_start", target=target, source=source, uid=uid)
         clauses = split_source(source)
         all_text: list[str] = []
@@ -448,14 +613,19 @@ class Session:
         t0 = time.monotonic()
 
         for clause in clauses:
-            splitter = ClauseSplitter(
-                min_chars=int(cfg["tts"].get("clause_min_chars", 6)),
-                max_chars=int(cfg["tts"].get("clause_max_chars", 20)))
+            splitter = None
+            if not continuous:
+                splitter = ClauseSplitter(
+                    min_chars=int(cfg["tts"].get("clause_min_chars", 6)),
+                    max_chars=int(cfg["tts"].get("clause_max_chars", 20)))
 
             def submit_target(chunks):
                 nonlocal first_clause_at, submitted
                 for piece in chunks:
-                    if self._submit_clause(uid, piece):
+                    # ZipVoice often drops Arabic digits; speak numbers as
+                    # Chinese/English words before synthesis.
+                    piece = normalize_numbers(piece, target)
+                    if self._submit_clause(uid, piece, target):
                         submitted += 1
                         if first_clause_at is None:
                             first_clause_at = time.monotonic()
@@ -465,7 +635,10 @@ class Session:
                 if first_token_at is None:
                     first_token_at = time.monotonic()
                 self._emit("trans_token", text=chunk, target=target, uid=uid)
-                submit_target(splitter.feed(chunk))
+                if splitter is not None:
+                    # Normalize before clause splitting so thousands commas
+                    # (1,000) cannot be mistaken for target punctuation.
+                    submit_target(splitter.feed(normalize_numbers(chunk, target)))
 
             translation = ""
             if self.mock:
@@ -477,17 +650,28 @@ class Session:
                 context = self._ctx[-2:] if cfg["llm"].get("use_context", False) else None
                 translation = self.c.llm.translate(
                     clause, target, on_token, context=context)
+            else:
+                translation = clause
+                on_token(translation)
             if not translation:
                 translation = clause
                 on_token(translation)
-            submit_target([splitter.flush()])
+            if splitter is not None:
+                submit_target([splitter.flush()])
             all_text.append(translation.strip())
             self._ctx.append((clause, translation.strip()))
             self._ctx = self._ctx[-6:]
 
-        final_text = " ".join(t for t in all_text if t).strip()
-        if submitted and self._tts is not None:
-            self._tts.submit("", uid, last=True)
+        final_text = normalize_numbers(
+            " ".join(t for t in all_text if t).strip(), target)
+        if continuous:
+            if (self._tts is not None and self.c.tts_enabled
+                    and meaningful(final_text)):
+                if self._tts.submit(final_text, uid, last=True, target=target):
+                    submitted = 1
+                    first_clause_at = time.monotonic()
+        elif submitted and self._tts is not None:
+            self._tts.submit("", uid, last=True, target=target)
         self._emit("trans_final", text=final_text, target=target, uid=uid,
                    ms=round((time.monotonic() - t0) * 1000, 1),
                    ttft_ms=(round((first_token_at - t0) * 1000, 1)
