@@ -43,6 +43,8 @@ Done.
 
 Optional (not downloaded by this script):
   Qwen3-0.6B:  hf download AXERA-TECH/Qwen3-0.6B-GPTQ-Int4 --local-dir models/qwen3-0.6b
-  FireRedPunc: put ../FireRedPunc.AXERA/models/punc.axmodel in place
+  FireRedPunc: https://github.com/ZY-2012/FireRedPunc.AXERA
+               https://huggingface.co/HY-2012/FireRedPunc.AXERA
+               put ../FireRedPunc.AXERA/models/punc.axmodel in place
   Zipformer:   put ../ZF/streaming/release/models in place
 EOF

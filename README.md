@@ -10,7 +10,7 @@ AX650N 端侧实时语音翻译。
 
 `Zipformer 流式 ASR` · `FireRedPunc 标点` · `Qwen3-0.6B 翻译`
 
-- 上游: [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) · [Zipformer](https://github.com/k2-fsa/icefall) · [FireRedPunc](https://huggingface.co/FireRedTeam/FireRedPunc) · [Opus-MT](https://github.com/Helsinki-NLP/OPUS-MT) · [Qwen3](https://github.com/QwenLM/Qwen3) · [TEN-VAD](https://github.com/TEN-framework/ten-vad) · [ZipVoice](https://github.com/k2-fsa/ZipVoice) · [ax-llm](https://github.com/AXERA-TECH/ax-llm)
+- 上游: [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) · [Zipformer](https://github.com/k2-fsa/icefall) · [FireRedPunc GitHub](https://github.com/ZY-2012/FireRedPunc.AXERA) · [HuggingFace](https://huggingface.co/HY-2012/FireRedPunc.AXERA) · [Opus-MT](https://github.com/Helsinki-NLP/OPUS-MT) · [Qwen3](https://github.com/QwenLM/Qwen3) · [TEN-VAD](https://github.com/TEN-framework/ten-vad) · [ZipVoice](https://github.com/k2-fsa/ZipVoice) · [ax-llm](https://github.com/AXERA-TECH/ax-llm)
 
 <p align="center">
   <code>语音翻译</code>　<code>克隆语音</code>　<code>流式识别</code>　<code>离线定稿</code>　<code>端侧推理</code>
@@ -101,7 +101,7 @@ Speech-Translation/
 | --- | --- | --- |
 | ASR | `sensevoice.axmodel` / `streaming_sensevoice.axmodel` | [AXERA-TECH/models-for-asr-chain](https://huggingface.co/AXERA-TECH/models-for-asr-chain) · [HY-2012/Tmp_Models](https://huggingface.co/HY-2012/Tmp_Models) |
 | VAD | `ten-vad.axmodel` | [models-for-asr-chain](https://huggingface.co/AXERA-TECH/models-for-asr-chain) |
-| 标点（可选） | `punc.axmodel` | [FireRedPunc](https://huggingface.co/FireRedTeam/FireRedPunc) |
+| 标点（可选） | `punc.axmodel` | [FireRedPunc GitHub](https://github.com/ZY-2012/FireRedPunc.AXERA) · [HuggingFace](https://huggingface.co/HY-2012/FireRedPunc.AXERA) |
 | 流式 ASR（可选） | Zipformer axmodel | [HY-2012/zipformer_streaming.axera](https://huggingface.co/HY-2012/zipformer_streaming.axera) |
 | Opus-MT | `encoder.axmodel` / `decoder.axmodel`（zh-en、en-zh） | [HY-2012/Opus-MT.AXERA](https://huggingface.co/HY-2012/Opus-MT.AXERA) · [源码](https://github.com/ZY-2012/Opus-MT.AXERA) |
 | Qwen3-0.6B（可选） | `qwen3_*.axmodel` / `qwen3_post.axmodel` | [AXERA-TECH/Qwen3-0.6B-GPTQ-Int4](https://huggingface.co/AXERA-TECH/Qwen3-0.6B-GPTQ-Int4) |
